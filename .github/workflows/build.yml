@@ -1,0 +1,46 @@
+name: Build & Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Weekly govulncheck against a fresh vulnerability database.
+    - cron: "0 6 * * 1"
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - name: Install mingw-w64 (cgo cross-compile for hwinfo-bridge)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends gcc-mingw-w64-x86-64
+
+      - name: Install Elgato CLI (manifest validation)
+        run: npm install -g @elgato/cli
+
+      - name: make verify
+        # Live e2e tests self-skip in CI (no DeckBridge emulator).
+        run: DECKBRIDGE_OPTIONAL=1 make verify
+
+  govulncheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - name: Install mingw-w64 (cgo cross-compile for hwinfo-bridge)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends gcc-mingw-w64-x86-64
+
+      - name: govulncheck (windows target incl. cgo bridge)
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc GOOS=windows GOARCH=amd64 "$(go env GOPATH)/bin/govulncheck" ./...
