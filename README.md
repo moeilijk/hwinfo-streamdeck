@@ -102,3 +102,7 @@ mock sensors (HTTP control API on `:9999`), used by the integration suites in `t
 ## History and credits
 
 This plugin was created by [Shayne Sweeney](https://github.com/shayne) ([exension](https://github.com/exension)), who built it as a closed-source passion project, open-sourced it once HWiNFO opened up the shared memory interface, and maintained it through v2.0.5. In 2026 he handed the project over to [moeilijk](https://github.com/moeilijk), who maintains it today. Thanks, Shayne.
+
+## License
+
+[GPL-3.0](LICENSE), with the permission of the original author.
