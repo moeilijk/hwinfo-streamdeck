@@ -105,4 +105,4 @@ This plugin was created by [Shayne Sweeney](https://github.com/shayne) ([exensio
 
 ## License
 
-[GPL-3.0](LICENSE), with the permission of the original author.
+[GPL-3.0](LICENSE). The plugin was created by Shayne Sweeney and was originally unlicensed; it was placed under GPL-3.0 with his permission when the project changed maintainers in 2026.
