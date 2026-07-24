@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport"
+    content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,minimal-ui,viewport-fit=cover" />
+  <title>HWiNFO Dial Carousel</title>
+  <link rel="stylesheet" href="css/sdpi.css" />
+  <link rel="stylesheet" href="css/local.css" />
+  <style>
+    #error { display: none; }
+    #sensorSearch, #readingSelect { max-width: 226px; }
+    #readingSelect, #pageList, #bulkPreviewList { font-family: monospace; }
+    /* The sdpi framework caps every .sdpi-item row at 344px AND puts the label in a
+       fixed 94px left column beside the value, so the list only used the right part of
+       the panel. Stack the label ABOVE the list and let the list span the full panel
+       width edge-to-edge, reclaiming the wasted left column (room for long names). */
+    .wide-list-row {
+      max-width: none;
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .wide-list-row > .sdpi-item-label {
+      width: auto;
+      text-align: left;
+      margin-left: 0;
+    }
+    /* In a column flex the value's `flex: 1 0 0` (sdpi.css) would size the HEIGHT and
+       stretch the list vertically. Pin it back to its natural height (size= rows). */
+    .wide-list-row > #pageList,
+    .wide-list-row > #bulkPreviewList {
+      flex: 0 0 auto;
+    }
+    /* The Preview row lives inside the Bulk Add <details>, which has 12px/18px side
+       padding (sdpi.css). Cancel it so the Preview list lines up edge-to-edge with the
+       top-level Pages list instead of sitting indented and narrower. */
+    details > .wide-list-row {
+      margin-left: -12px;
+      margin-right: -18px;
+    }
+    #pageList, #bulkPreviewList {
+      width: 100%;
+      max-width: none;
+      background: #3d3d3d;
+      color: #d8d8d8;
+      border: 1px solid #555;
+    }
+    #pageList option, #bulkPreviewList option {
+      background: #3d3d3d;
+      color: #d8d8d8;
+    }
+    #pageList option:checked, #bulkPreviewList option:checked {
+      background: #007aff linear-gradient(0deg, #007aff 0%, #007aff 100%);
+      color: #ffffff;
+    }
+    #bulkPreviewList option:disabled {
+      color: #8a8a8a;
+      font-style: italic;
+    }
+    .dial-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+    .dial-actions button { min-width: 48px; }
+    .page-settings[hidden] { display: none; }
+    .empty-label { visibility: hidden; }
+  </style>
+</head>
+
+<body>
+  <div id="error" class="sdpi-wrapper localbody hiddenx">
+    <div class="sdpi-heading">Plugin Error</div>
+    <div class="sdpi-item">
+      <details open class="message caution">
+        <summary>Unable To Communicate With Sensor Source</summary>
+        <p>Make sure HWiNFO64 is running in Sensors-only mode with Shared Memory Support enabled.</p>
+      </details>
+    </div>
+  </div>
+
+  <div id="ui" class="sdpi-wrapper localbody hiddenx">
+    <div class="sdpi-heading">Source</div>
+
+    <!-- Build: 3c5e9b5 + V5-prep.41 (plugin commit 3c5e9b5 plus local V5 prep fixes).
+         Kept as a comment for traceability without taking up PI space; bump it
+         together with the ?v= cache-busters at the bottom of this file. -->
+
+
+    <div class="sdpi-heading">Dial Pages</div>
+
+    <div class="sdpi-heading">Sensors</div>
+
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">Find</div>
+      <input class="sdpi-item-value" id="pageSensorSearch" type="text" placeholder="Search sensors" />
+    </div>
+
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">Category</div>
+      <select class="sdpi-item-value select" id="pageSensorCategoryFilter">
+        <option value="">All</option>
+        <option value="cpu">CPU</option>
+        <option value="gpu">GPU</option>
+        <option value="memory">Memory</option>
+        <option value="disk">Disk</option>
+        <option value="network">Network</option>
+        <option value="motherboard">Motherboard</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">Sensor</div>
+      <select class="sdpi-item-value select" id="pageSensorSelect" disabled>
+        <option>Loading...</option>
+      </select>
+    </div>
+
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">Reading</div>
+      <select class="sdpi-item-value select" id="pageReadingSelect" disabled>
+        <option></option>
+      </select>
+    </div>
+
+    <div class="sdpi-item">
+      <div class="sdpi-item-label empty-label">Action</div>
+      <div class="sdpi-item-value dial-actions">
+        <button id="addPageBtn" type="button" disabled>Add</button>
+      </div>
+    </div>
+
+    <details>
+      <summary>Bulk Add</summary>
+
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Rule</div>
+        <select class="sdpi-item-value select" id="bulkRule">
+          <option value="sensor-all">All readings from this sensor</option>
+          <option value="matching-category">This reading on all matching sensors</option>
+          <option value="numbered-family">All readings in this numbered set (cores, fans…)</option>
+        </select>
+      </div>
+
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">
+          Name format
+          <span
+            class="field-help"
+            title="Optional title template for the added pages. Tokens: %n = number in the reading label, %r = reading label, %s = sensor name. Leave blank for the default titles."
+          >(i)</span>
+        </div>
+        <input class="sdpi-item-value" id="bulkNameFormat" type="text" placeholder="e.g. Core %n" />
+      </div>
+
+      <div class="sdpi-item">
+        <div class="sdpi-item-label empty-label">Action</div>
+        <div class="sdpi-item-value dial-actions">
+          <button id="bulkPreviewBtn" type="button">Preview</button>
+          <button id="bulkAddBtn" type="button" disabled>Add Selected</button>
+        </div>
+      </div>
+
+      <div class="sdpi-item wide-list-row">
+        <div class="sdpi-item-label">Preview</div>
+        <select class="sdpi-item-value select" id="bulkPreviewList" size="6" multiple></select>
+      </div>
+    </details>
+
+    <div class="sdpi-item wide-list-row">
+      <div class="sdpi-item-label" id="pagesLabel">Pages</div>
+      <select class="sdpi-item-value select" id="pageList" size="8"></select>
+    </div>
+
+    <div class="sdpi-item">
+      <div class="sdpi-item-label empty-label">Actions</div>
+      <div class="sdpi-item-value dial-actions">
+        <button id="moveUpBtn" type="button" disabled>Up</button>
+        <button id="moveDownBtn" type="button" disabled>Down</button>
+        <button id="removePageBtn" type="button" disabled>Delete</button>
+      </div>
+    </div>
+
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">Dial press</div>
+      <div class="sdpi-item-value">Toggle overview</div>
+    </div>
+
+    <div class="sdpi-item show-label-row">
+      <div class="sdpi-item-label">Reverse dial</div>
+      <div class="show-label-cell">
+        <input type="checkbox" class="show-label-checkbox" id="reverseRotation" />
+      </div>
+      <div class="sdpi-item-label empty"></div>
+      <div class="show-label-cell show-label-cell-spacer" aria-hidden="true"></div>
+    </div>
+
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">Default view</div>
+      <select class="sdpi-item-value select" id="defaultView">
+        <option value="fullscreen">Fullscreen</option>
+        <option value="overview">Overview</option>
+      </select>
+    </div>
+
+    <div class="sdpi-item" id="overviewStyleRow">
+      <div class="sdpi-item-label">Overview style</div>
+      <select class="sdpi-item-value select" id="overviewStyle">
+        <option value="stacked">Stacked</option>
+        <option value="carousel">Carousel</option>
+      </select>
+    </div>
+
+    <div class="sdpi-item" id="overviewPagesRow">
+      <div class="sdpi-item-label">Overview pages</div>
+      <select class="sdpi-item-value select" id="overviewPages">
+        <option value="3">3</option>
+        <option value="2">2</option>
+      </select>
+    </div>
+
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">Indicator</div>
+      <select class="sdpi-item-value select" id="indicatorStyle">
+        <option value="auto">Auto</option>
+        <option value="dots">Dots</option>
+        <option value="count">Count</option>
+        <option value="off">Off</option>
+      </select>
+    </div>
+
+    <div class="sdpi-item show-label-row">
+      <div class="sdpi-item-label">In fullscreen</div>
+      <div class="show-label-cell">
+        <input type="checkbox" class="show-label-checkbox" id="indicatorFullscreen" />
+      </div>
+      <div class="sdpi-item-label empty"></div>
+      <div class="show-label-cell show-label-cell-spacer" aria-hidden="true"></div>
+    </div>
+
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">Color</div>
+      <input class="sdpi-item-value" id="indicatorColor" type="color" />
+    </div>
+
+    <div type="range" class="sdpi-item" id="indicatorSize">
+      <div class="sdpi-item-label">Size</div>
+      <div class="sdpi-item-value">
+        <span value="1">1</span>
+        <div class="range-wrap">
+          <span class="range-val">6</span>
+          <input type="range" min="1" max="8" step="0.5" value="6" />
+        </div>
+        <span value="8">8</span>
+      </div>
+    </div>
+
+    <div class="sdpi-heading">Separator</div>
+
+    <div type="range" class="sdpi-item" id="separatorWidth">
+      <div class="sdpi-item-label">Width</div>
+      <div class="sdpi-item-value">
+        <span value="0">0</span>
+        <div class="range-wrap">
+          <span class="range-val">3</span>
+          <input type="range" min="0" max="10" step="1" value="3" />
+        </div>
+        <span value="10">10</span>
+      </div>
+    </div>
+
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">Color</div>
+      <input class="sdpi-item-value" id="separatorColor" type="color" />
+    </div>
+
+    <div id="pageSettings" class="page-settings" hidden>
+      <details open>
+        <summary>Display</summary>
+
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Title</div>
+          <input class="sdpi-item-value" id="pageTitle" type="text" />
+        </div>
+
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Show title</div>
+          <input class="sdpi-item-value" id="showTitleInGraph" type="checkbox" />
+        </div>
+
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Display</div>
+          <select class="sdpi-item-value select" id="graphMode">
+            <option value="both">Both</option>
+            <option value="graph">Graph only</option>
+            <option value="text">Text only</option>
+          </select>
+        </div>
+
+        <div type="range" class="sdpi-item" id="titleFontSize">
+          <div class="sdpi-item-label">Title size</div>
+          <div class="sdpi-item-value">
+            <span value="8">8</span>
+            <div class="range-wrap">
+              <span class="range-val">14</span>
+              <input type="range" min="8" max="30" step="0.5" value="14" />
+            </div>
+            <span value="30">30</span>
+          </div>
+        </div>
+
+        <div type="range" class="sdpi-item" id="valueFontSize">
+          <div class="sdpi-item-label">Value size</div>
+          <div class="sdpi-item-value">
+            <span value="8">8</span>
+            <div class="range-wrap">
+              <span class="range-val">18</span>
+              <input type="range" min="8" max="30" step="0.5" value="18" />
+            </div>
+            <span value="30">30</span>
+          </div>
+        </div>
+
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Graph height</div>
+          <input class="sdpi-item-value" id="graphHeightPct" type="range" min="10" max="100" step="5" />
+        </div>
+
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Line thickness</div>
+          <input class="sdpi-item-value" id="graphLineThickness" type="range" min="1" max="4" step="1" />
+        </div>
+
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Text stroke</div>
+          <input class="sdpi-item-value" id="textStroke" type="checkbox" />
+        </div>
+
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Stroke color</div>
+          <input class="sdpi-item-value" id="textStrokeColor" type="color" />
+        </div>
+
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Background</div>
+          <input class="sdpi-item-value" id="backgroundColor" type="color" />
+        </div>
+
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Value Text</div>
+          <input class="sdpi-item-value" id="valueTextColor" type="color" />
+        </div>
+
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Foreground</div>
+          <input class="sdpi-item-value" id="foregroundColor" type="color" />
+        </div>
+
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Highlight</div>
+          <input class="sdpi-item-value" id="highlightColor" type="color" />
+        </div>
+
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Title Color</div>
+          <input class="sdpi-item-value" id="titleColor" type="color" />
+        </div>
+      </details>
+
+      <details>
+        <summary>Scale</summary>
+
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Min/Max</div>
+          <div class="sdpi-item-value">
+            <input id="minValue" type="number" placeholder="Min" />
+            <input id="maxValue" type="number" placeholder="Max" />
+          </div>
+        </div>
+
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Graph Unit</div>
+          <select class="sdpi-item-value select" id="graphUnit">
+            <option value="">None</option>
+            <option value="B">B</option>
+            <option value="KB">KB</option>
+            <option value="MB">MB</option>
+            <option value="GB">GB</option>
+            <option value="TB">TB</option>
+          </select>
+        </div>
+
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Format</div>
+          <input class="sdpi-item-value" id="formatValue" type="text" placeholder="%.0f (no decimals)" />
+        </div>
+
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Divisor</div>
+          <input class="sdpi-item-value" id="divisorValue" type="number" placeholder="e.g. 125" min="1" />
+        </div>
+      </details>
+
+      <details>
+        <summary>Smoothing</summary>
+
+        <div type="range" class="sdpi-item" id="smoothingAlpha">
+          <div class="sdpi-item-label">Smoothing</div>
+          <div class="sdpi-item-value">
+            <span value="0.1">0.1</span>
+            <div class="range-wrap">
+              <span class="range-val">1</span>
+              <input type="range" min="0.1" max="1" step="0.1" value="1" />
+            </div>
+            <span value="1">1</span>
+          </div>
+        </div>
+      </details>
+
+      <details>
+        <summary>Alert Snooze</summary>
+
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">On Touch</div>
+          <div class="sdpi-item-value snooze-options" data-local-only="true">
+            <button type="button" class="snooze-duration snooze-preset" id="snooze5m" data-value="300000">5m</button>
+            <button type="button" class="snooze-duration snooze-preset" id="snooze15m" data-value="900000">15m</button>
+            <button type="button" class="snooze-duration snooze-preset" id="snooze1h" data-value="3600000">1h</button>
+            <button type="button" class="snooze-duration snooze-preset" id="snoozeUntilResumed" data-value="0">Until resumed</button>
+          </div>
+        </div>
+
+        <div class="sdpi-item">
+          <details class="noInnerMargins">
+            <summary>Help</summary>
+            <p>Select one or more presets. Each touch of the dial screen steps through the selected presets in order. After the last preset, the next touch resumes alerts.</p>
+          </details>
+        </div>
+      </details>
+
+      <details>
+        <summary>Thresholds</summary>
+
+        <div id="thresholdsContainer">
+          <!-- Dynamic threshold items will be rendered here -->
+        </div>
+
+        <div class="sdpi-item" id="addThresholdContainer">
+          <div class="sdpi-item-label">Add New</div>
+          <div class="sdpi-item-value" style="display: flex; align-items: center; gap: 4px;">
+            <input type="text" id="newThresholdName" placeholder="Name" style="width: 100px;" />
+            <button id="addThresholdBtn" class="sdpi-item-value" style="width: 60px;" type="button">Add</button>
+          </div>
+        </div>
+      </details>
+
+      <details id="globalThresholdsSection" hidden>
+        <summary>Global Thresholds</summary>
+
+        <div id="globalRefsContainer">
+          <!-- Dynamic global threshold checkboxes rendered here -->
+        </div>
+      </details>
+    </div>
+
+    <!-- Template for threshold items (hidden, cloned by JS) -->
+    <template id="thresholdTemplate">
+      <div class="threshold-item" data-threshold-id="">
+        <div class="sdpi-item" style="margin-top: 8px;">
+          <div class="sdpi-item-label threshold-header-label">
+            <input type="text" class="threshold-name" placeholder="Name" style="width: 70px;" />
+          </div>
+          <div class="sdpi-item-value threshold-header-value" style="display: flex; align-items: center; gap: 4px;">
+            <button class="threshold-toggle" style="width: 26px; padding: 0;">on</button>
+            <span class="threshold-arrows">
+              <button class="threshold-move-up" style="width: 18px; padding: 0;" title="Move up">&uarr;</button>
+              <button class="threshold-move-down" style="width: 18px; padding: 0;" title="Move down">&darr;</button>
+            </span>
+            <button class="threshold-remove" style="width: 18px; padding: 0; background: #a33; color: white;" title="Remove">×</button>
+          </div>
+        </div>
+
+        <div class="threshold-settings" style="display: none;">
+          <div class="sdpi-item">
+            <div class="sdpi-item-label">Text</div>
+            <input type="text" class="sdpi-item-value threshold-text" placeholder="e.g. HOT or Hot {value}" />
+          </div>
+          <div class="sdpi-item">
+            <div class="sdpi-item-label">Condition</div>
+            <div class="sdpi-item-value" style="display: flex; align-items: center; gap: 4px;">
+              <select class="threshold-operator" style="width: 55px;">
+                <option value=">">&gt;</option>
+                <option value="<">&lt;</option>
+                <option value=">=" selected>&gt;=</option>
+                <option value="<=">&lt;=</option>
+                <option value="==">==</option>
+              </select>
+              <input type="number" class="threshold-value" step="any" style="width: 60px;" placeholder="Value" />
+            </div>
+          </div>
+
+          <div class="sdpi-item threshold-advanced-toggle-row">
+            <div class="sdpi-item-label threshold-empty-label"></div>
+            <div class="sdpi-item-value threshold-advanced-toggle-cell">
+              <button class="threshold-advanced-toggle" type="button">Advanced</button>
+            </div>
+          </div>
+
+          <div class="threshold-advanced-panel" style="display: none;">
+            <div class="sdpi-item threshold-compact-row">
+              <div class="sdpi-item-label">
+                Hyst
+                <span
+                  class="field-help"
+                  title="Hysteresis prevents alert flapping around the threshold. Example: with &gt;= 70 and Hyst 5, the alert stays active until the value drops below 65. Default: 1. Use 0 or higher."
+                >(i)</span>
+              </div>
+              <input type="number" class="sdpi-item-value threshold-hysteresis threshold-input-compact" step="any" placeholder="1" />
+            </div>
+
+            <div class="sdpi-item threshold-compact-row">
+              <div class="sdpi-item-label">
+                Dwell ms
+                <span
+                  class="field-help"
+                  title="The condition must stay true for this many milliseconds before the alert activates. Use 0 for immediate activation. Default: 1000. Typical values: 500, 1000, 5000."
+                >(i)</span>
+              </div>
+              <input type="number" class="sdpi-item-value threshold-dwell threshold-input-compact" step="100" min="0" placeholder="1000" />
+            </div>
+
+            <div class="sdpi-item threshold-compact-row">
+              <div class="sdpi-item-label">
+                Cooldown ms
+                <span
+                  class="field-help"
+                  title="After the alert clears, it cannot trigger again until this many milliseconds have passed. Use 0 to disable cooldown. Default: 5000. Typical values: 1000, 5000, 10000."
+                >(i)</span>
+              </div>
+              <input type="number" class="sdpi-item-value threshold-cooldown threshold-input-compact" step="100" min="0" placeholder="5000" />
+            </div>
+
+            <div class="sdpi-item threshold-sticky-row">
+              <div class="sdpi-item-label">
+                Sticky
+                <span
+                  class="field-help"
+                  title="Sticky latches the alert and displayed value on the tile until you press the tile to clear it. After clearing, the threshold stays suppressed until the value has actually returned to normal. Toggle on or off."
+                >(i)</span>
+              </div>
+              <div class="sdpi-item-value threshold-sticky-cell">
+                <button class="threshold-sticky-toggle" type="button">off</button>
+              </div>
+            </div>
+
+            <div class="sdpi-item threshold-bringfront-row">
+              <div class="sdpi-item-label">
+                Bring to front
+                <span
+                  class="field-help"
+                  title="When this alarm fires (or its snooze times out), make this page the active one on the dial. Edge-triggered, so you can still scroll to other pages afterwards. Toggle on or off."
+                >(i)</span>
+              </div>
+              <div class="sdpi-item-value threshold-bringfront-cell">
+                <button class="threshold-bringfront-toggle" type="button">off</button>
+              </div>
+            </div>
+          </div>
+
+          <div type="color" class="sdpi-item">
+            <div class="sdpi-item-label">Background</div>
+            <input type="color" class="sdpi-item-value threshold-bg" value="#333300" />
+            <div class="sdpi-item-label">Value Text</div>
+            <input type="color" class="sdpi-item-value threshold-vt" value="#ffff00" />
+          </div>
+
+          <div type="color" class="sdpi-item">
+            <div class="sdpi-item-label">Foreground</div>
+            <input type="color" class="sdpi-item-value threshold-fg" value="#999900" />
+            <div class="sdpi-item-label">Highlight</div>
+            <input type="color" class="sdpi-item-value threshold-hl" value="#ffff00" />
+          </div>
+
+          <div type="color" class="sdpi-item">
+            <div class="sdpi-item-label">Alert Text</div>
+            <input type="color" class="sdpi-item-value threshold-tc" value="#ffffff" />
+          </div>
+        </div>
+      </div>
+    </template>
+  </div>
+
+  <script src="pi_utils.js?v=V5-prep.41"></script>
+  <script src="dial_pi.js?v=V5-prep.41"></script>
+</body>
+
+</html>

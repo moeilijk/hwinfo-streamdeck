@@ -1,3 +1,5 @@
+//go:build windows
+
 package shmem
 
 /*
@@ -12,8 +14,8 @@ import (
 	"syscall"
 	"unsafe"
 
-	"github.com/shayne/hwinfo-streamdeck/internal/hwinfo/mutex"
-	"github.com/shayne/hwinfo-streamdeck/internal/hwinfo/util"
+	"github.com/moeilijk/hwinfo-streamdeck/internal/hwinfo/mutex"
+	"github.com/moeilijk/hwinfo-streamdeck/internal/hwinfo/util"
 	"golang.org/x/sys/windows"
 )
 

@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no" />
+  <title>HWiNFO Composite Dashboard</title>
+  <link rel="stylesheet" href="css/sdpi.css" />
+  <link rel="stylesheet" href="css/local.css" />
+  <style>
+    #error { display: none; }
+    .slot-section { border-top: 1px solid #444; margin-top: 4px; }
+    .slot-sensor-select, .slot-reading-select { max-width: 226px; padding-right: 25px; font-family: monospace; }
+    .slot-sensor-select option, .slot-reading-select option { font-family: monospace; }
+  </style>
+</head>
+<body>
+
+  <div id="error" class="sdpi-wrapper localbody hiddenx">
+    <div class="sdpi-heading">Plugin Error</div>
+    <div class="sdpi-item">
+      <details open class="message caution">
+        <summary>Unable To Communicate With Sensor Source</summary>
+        <p>The plugin is unable to communicate with the configured sensor source.</p>
+        <p>Make sure it's running and the remote web server is enabled on port 8085.</p>
+      </details>
+    </div>
+  </div>
+
+  <div id="ui" class="sdpi-wrapper localbody hiddenx">
+
+    <div class="sdpi-heading">Source</div>
+
+
+    <div class="sdpi-heading">Tile Settings</div>
+
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">Mode</div>
+      <select class="sdpi-item-value select" id="composite_mode">
+        <option value="text">Text only</option>
+        <option value="graph">Graph only</option>
+        <option value="both">Graph + Text</option>
+      </select>
+    </div>
+
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">Slots</div>
+      <select class="sdpi-item-value select" id="composite_slotCount">
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+      </select>
+    </div>
+
+    <details>
+      <summary>Timing &amp; Smoothing</summary>
+
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Update every</div>
+        <select class="sdpi-item-value select" id="updateIntervalOverrideMs">
+          <option value="0">Use global</option>
+          <option value="1000">1s</option>
+          <option value="2000">2s</option>
+          <option value="5000">5s</option>
+          <option value="10000">10s</option>
+          <option value="30000">30s</option>
+          <option value="60000">60s</option>
+        </select>
+      </div>
+
+      <div type="range" class="sdpi-item" id="smoothingAlpha">
+        <div class="sdpi-item-label">Smoothing</div>
+        <div class="sdpi-item-value">
+          <span value="0.1">0.1</span>
+          <div class="range-wrap">
+            <span class="range-val">1</span>
+            <input type="range" min="0.1" max="1" step="0.1" value="1" />
+          </div>
+          <span value="1">1</span>
+        </div>
+      </div>
+    </details>
+
+    <!-- Slot 0 -->
+    <div class="slot-section" id="slot-section-0">
+      <div class="sdpi-heading">Slot 1</div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Sensor</div>
+        <select class="sdpi-item-value select slot-sensor-select" id="slot0_sensorSelect" disabled>
+          <option>Loading...</option>
+        </select>
+      </div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Reading</div>
+        <select class="sdpi-item-value select slot-reading-select" id="slot0_readingSelect" disabled>
+          <option></option>
+        </select>
+      </div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Label</div>
+        <input class="sdpi-item-value" type="text" id="slot0_title" placeholder="Auto" />
+      </div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Mode</div>
+        <select class="sdpi-item-value select" id="slot0_mode">
+          <option value="">Use tile mode</option>
+          <option value="text">Text only</option>
+          <option value="graph">Graph only</option>
+          <option value="both">Graph + Text</option>
+        </select>
+      </div>
+      <details>
+        <summary>Colors &amp; Alpha</summary>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Highlight</div>
+          <input class="sdpi-item-value" type="color" id="slot0_highlightColor" value="#009E00" />
+        </div>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Fill</div>
+          <input class="sdpi-item-value" type="color" id="slot0_foregroundColor" value="#005128" />
+        </div>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Value text</div>
+          <input class="sdpi-item-value" type="color" id="slot0_valueTextColor" value="#ffffff" />
+        </div>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Title text</div>
+          <input class="sdpi-item-value" type="color" id="slot0_titleColor" value="#b7b7b7" />
+        </div>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Background</div>
+          <input class="sdpi-item-value" type="color" id="slot0_backgroundColor" value="#000000" />
+        </div>
+        <div type="range" class="sdpi-item">
+          <div class="sdpi-item-label">Fill alpha</div>
+          <div class="sdpi-item-value">
+            <span value="0">0</span>
+            <div class="range-wrap">
+              <span class="range-val">55</span>
+              <input type="range" min="0" max="100" step="1" value="55" id="slot0_fillAlpha" />
+            </div>
+            <span value="100">100</span>
+          </div>
+        </div>
+      </details>
+      <details>
+        <summary>Scaling &amp; Font</summary>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Min / Max</div>
+          <div class="sdpi-item" style="margin-left:-4px">
+            <input class="sdpi-item-value" style="width:4em" placeholder="Min" type="number" id="slot0_min" />
+            <input class="sdpi-item-value" style="margin-left:-7px;width:4em" placeholder="Max" type="number" id="slot0_max" />
+          </div>
+        </div>
+        <div type="range" class="sdpi-item">
+          <div class="sdpi-item-label">Title size</div>
+          <div class="sdpi-item-value">
+            <span value="8">8</span>
+            <div class="range-wrap">
+              <span class="range-val">9</span>
+              <input type="range" min="8" max="20" step="0.5" value="9" id="slot0_titleFontSize" />
+            </div>
+            <span value="20">20</span>
+          </div>
+        </div>
+        <div type="range" class="sdpi-item">
+          <div class="sdpi-item-label">Value size</div>
+          <div class="sdpi-item-value">
+            <span value="8">8</span>
+            <div class="range-wrap">
+              <span class="range-val">10.5</span>
+              <input type="range" min="8" max="20" step="0.5" value="10.5" id="slot0_valueFontSize" />
+            </div>
+            <span value="20">20</span>
+          </div>
+        </div>
+        <div type="range" class="sdpi-item">
+          <div class="sdpi-item-label">Graph height</div>
+          <div class="sdpi-item-value">
+            <span value="10">10</span>
+            <div class="range-wrap">
+              <span class="range-val">100</span>
+              <input type="range" min="10" max="100" step="5" value="100" id="slot0_graphHeightPct" />
+            </div>
+            <span value="100">100%</span>
+          </div>
+        </div>
+        <div type="range" class="sdpi-item">
+          <div class="sdpi-item-label">Line thickness</div>
+          <div class="sdpi-item-value">
+            <span value="1">1</span>
+            <div class="range-wrap">
+              <span class="range-val">1</span>
+              <input type="range" min="1" max="4" step="1" value="1" id="slot0_graphLineThickness" />
+            </div>
+            <span value="4">4</span>
+          </div>
+        </div>
+        <div class="sdpi-item show-label-row">
+          <div class="sdpi-item-label">Text stroke</div>
+          <div class="show-label-cell">
+            <input type="checkbox" class="show-label-checkbox" id="slot0_textStroke" />
+          </div>
+          <div class="sdpi-item-label empty"></div>
+          <div class="show-label-cell show-label-cell-spacer" aria-hidden="true"></div>
+        </div>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Stroke color</div>
+          <input class="sdpi-item-value" type="color" id="slot0_textStrokeColor" value="#000000" />
+        </div>
+      </details>
+      <details>
+        <summary>Advanced</summary>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Format</div>
+          <input class="sdpi-item-value" type="text" id="slot0_format" placeholder="%.0f" />
+        </div>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Divisor</div>
+          <input class="sdpi-item-value" type="text" id="slot0_divisor" placeholder="e.g. 1000" />
+        </div>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Graph unit</div>
+          <select class="sdpi-item-value select" id="slot0_graphUnit">
+            <option value="">None</option>
+            <option value="B">B</option>
+            <option value="KB">KB</option>
+            <option value="MB">MB</option>
+            <option value="GB">GB</option>
+            <option value="TB">TB</option>
+          </select>
+        </div>
+      </details>
+      <details>
+        <summary>Thresholds</summary>
+        <div id="slot0_thresholdsContainer"></div>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Add New</div>
+          <div class="sdpi-item-value" style="display: flex; align-items: center; gap: 4px;">
+            <input type="text" id="slot0_newThresholdName" placeholder="Name" style="width: 100px;" />
+            <button id="slot0_addThresholdBtn" style="width: 60px;">Add</button>
+          </div>
+        </div>
+        <div id="slot0_globalRefsContainer"></div>
+      </details>
+    </div>
+
+    <!-- Slot 1 -->
+    <div class="slot-section" id="slot-section-1">
+      <div class="sdpi-heading">Slot 2</div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Sensor</div>
+        <select class="sdpi-item-value select slot-sensor-select" id="slot1_sensorSelect" disabled>
+          <option>Loading...</option>
+        </select>
+      </div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Reading</div>
+        <select class="sdpi-item-value select slot-reading-select" id="slot1_readingSelect" disabled>
+          <option></option>
+        </select>
+      </div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Label</div>
+        <input class="sdpi-item-value" type="text" id="slot1_title" placeholder="Auto" />
+      </div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Mode</div>
+        <select class="sdpi-item-value select" id="slot1_mode">
+          <option value="">Use tile mode</option>
+          <option value="text">Text only</option>
+          <option value="graph">Graph only</option>
+          <option value="both">Graph + Text</option>
+        </select>
+      </div>
+      <details>
+        <summary>Colors &amp; Alpha</summary>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Highlight</div>
+          <input class="sdpi-item-value" type="color" id="slot1_highlightColor" value="#009EBE" />
+        </div>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Fill</div>
+          <input class="sdpi-item-value" type="color" id="slot1_foregroundColor" value="#004050" />
+        </div>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Value text</div>
+          <input class="sdpi-item-value" type="color" id="slot1_valueTextColor" value="#ffffff" />
+        </div>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Title text</div>
+          <input class="sdpi-item-value" type="color" id="slot1_titleColor" value="#b7b7b7" />
+        </div>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Background</div>
+          <input class="sdpi-item-value" type="color" id="slot1_backgroundColor" value="#000000" />
+        </div>
+        <div type="range" class="sdpi-item">
+          <div class="sdpi-item-label">Fill alpha</div>
+          <div class="sdpi-item-value">
+            <span value="0">0</span>
+            <div class="range-wrap">
+              <span class="range-val">55</span>
+              <input type="range" min="0" max="100" step="1" value="55" id="slot1_fillAlpha" />
+            </div>
+            <span value="100">100</span>
+          </div>
+        </div>
+      </details>
+      <details>
+        <summary>Scaling &amp; Font</summary>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Min / Max</div>
+          <div class="sdpi-item" style="margin-left:-4px">
+            <input class="sdpi-item-value" style="width:4em" placeholder="Min" type="number" id="slot1_min" />
+            <input class="sdpi-item-value" style="margin-left:-7px;width:4em" placeholder="Max" type="number" id="slot1_max" />
+          </div>
+        </div>
+        <div type="range" class="sdpi-item">
+          <div class="sdpi-item-label">Title size</div>
+          <div class="sdpi-item-value">
+            <span value="8">8</span>
+            <div class="range-wrap">
+              <span class="range-val">9</span>
+              <input type="range" min="8" max="20" step="0.5" value="9" id="slot1_titleFontSize" />
+            </div>
+            <span value="20">20</span>
+          </div>
+        </div>
+        <div type="range" class="sdpi-item">
+          <div class="sdpi-item-label">Value size</div>
+          <div class="sdpi-item-value">
+            <span value="8">8</span>
+            <div class="range-wrap">
+              <span class="range-val">10.5</span>
+              <input type="range" min="8" max="20" step="0.5" value="10.5" id="slot1_valueFontSize" />
+            </div>
+            <span value="20">20</span>
+          </div>
+        </div>
+        <div type="range" class="sdpi-item">
+          <div class="sdpi-item-label">Graph height</div>
+          <div class="sdpi-item-value">
+            <span value="10">10</span>
+            <div class="range-wrap">
+              <span class="range-val">100</span>
+              <input type="range" min="10" max="100" step="5" value="100" id="slot1_graphHeightPct" />
+            </div>
+            <span value="100">100%</span>
+          </div>
+        </div>
+        <div type="range" class="sdpi-item">
+          <div class="sdpi-item-label">Line thickness</div>
+          <div class="sdpi-item-value">
+            <span value="1">1</span>
+            <div class="range-wrap">
+              <span class="range-val">1</span>
+              <input type="range" min="1" max="4" step="1" value="1" id="slot1_graphLineThickness" />
+            </div>
+            <span value="4">4</span>
+          </div>
+        </div>
+        <div class="sdpi-item show-label-row">
+          <div class="sdpi-item-label">Text stroke</div>
+          <div class="show-label-cell">
+            <input type="checkbox" class="show-label-checkbox" id="slot1_textStroke" />
+          </div>
+          <div class="sdpi-item-label empty"></div>
+          <div class="show-label-cell show-label-cell-spacer" aria-hidden="true"></div>
+        </div>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Stroke color</div>
+          <input class="sdpi-item-value" type="color" id="slot1_textStrokeColor" value="#000000" />
+        </div>
+      </details>
+      <details>
+        <summary>Advanced</summary>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Format</div>
+          <input class="sdpi-item-value" type="text" id="slot1_format" placeholder="%.0f" />
+        </div>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Divisor</div>
+          <input class="sdpi-item-value" type="text" id="slot1_divisor" placeholder="e.g. 1000" />
+        </div>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Graph unit</div>
+          <select class="sdpi-item-value select" id="slot1_graphUnit">
+            <option value="">None</option>
+            <option value="B">B</option>
+            <option value="KB">KB</option>
+            <option value="MB">MB</option>
+            <option value="GB">GB</option>
+            <option value="TB">TB</option>
+          </select>
+        </div>
+      </details>
+      <details>
+        <summary>Thresholds</summary>
+        <div id="slot1_thresholdsContainer"></div>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Add New</div>
+          <div class="sdpi-item-value" style="display: flex; align-items: center; gap: 4px;">
+            <input type="text" id="slot1_newThresholdName" placeholder="Name" style="width: 100px;" />
+            <button id="slot1_addThresholdBtn" style="width: 60px;">Add</button>
+          </div>
+        </div>
+        <div id="slot1_globalRefsContainer"></div>
+      </details>
+    </div>
+
+    <!-- Slot 2 -->
+    <div class="slot-section" id="slot-section-2" style="display:none">
+      <div class="sdpi-heading">Slot 3</div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Sensor</div>
+        <select class="sdpi-item-value select slot-sensor-select" id="slot2_sensorSelect" disabled>
+          <option>Loading...</option>
+        </select>
+      </div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Reading</div>
+        <select class="sdpi-item-value select slot-reading-select" id="slot2_readingSelect" disabled>
+          <option></option>
+        </select>
+      </div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Label</div>
+        <input class="sdpi-item-value" type="text" id="slot2_title" placeholder="Auto" />
+      </div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Mode</div>
+        <select class="sdpi-item-value select" id="slot2_mode">
+          <option value="">Use tile mode</option>
+          <option value="text">Text only</option>
+          <option value="graph">Graph only</option>
+          <option value="both">Graph + Text</option>
+        </select>
+      </div>
+      <details>
+        <summary>Colors &amp; Alpha</summary>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Highlight</div>
+          <input class="sdpi-item-value" type="color" id="slot2_highlightColor" value="#BE6000" />
+        </div>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Fill</div>
+          <input class="sdpi-item-value" type="color" id="slot2_foregroundColor" value="#502800" />
+        </div>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Value text</div>
+          <input class="sdpi-item-value" type="color" id="slot2_valueTextColor" value="#ffffff" />
+        </div>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Title text</div>
+          <input class="sdpi-item-value" type="color" id="slot2_titleColor" value="#b7b7b7" />
+        </div>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Background</div>
+          <input class="sdpi-item-value" type="color" id="slot2_backgroundColor" value="#000000" />
+        </div>
+        <div type="range" class="sdpi-item">
+          <div class="sdpi-item-label">Fill alpha</div>
+          <div class="sdpi-item-value">
+            <span value="0">0</span>
+            <div class="range-wrap">
+              <span class="range-val">55</span>
+              <input type="range" min="0" max="100" step="1" value="55" id="slot2_fillAlpha" />
+            </div>
+            <span value="100">100</span>
+          </div>
+        </div>
+      </details>
+      <details>
+        <summary>Scaling &amp; Font</summary>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Min / Max</div>
+          <div class="sdpi-item" style="margin-left:-4px">
+            <input class="sdpi-item-value" style="width:4em" placeholder="Min" type="number" id="slot2_min" />
+            <input class="sdpi-item-value" style="margin-left:-7px;width:4em" placeholder="Max" type="number" id="slot2_max" />
+          </div>
+        </div>
+        <div type="range" class="sdpi-item">
+          <div class="sdpi-item-label">Title size</div>
+          <div class="sdpi-item-value">
+            <span value="8">8</span>
+            <div class="range-wrap">
+              <span class="range-val">9</span>
+              <input type="range" min="8" max="20" step="0.5" value="9" id="slot2_titleFontSize" />
+            </div>
+            <span value="20">20</span>
+          </div>
+        </div>
+        <div type="range" class="sdpi-item">
+          <div class="sdpi-item-label">Value size</div>
+          <div class="sdpi-item-value">
+            <span value="8">8</span>
+            <div class="range-wrap">
+              <span class="range-val">10.5</span>
+              <input type="range" min="8" max="20" step="0.5" value="10.5" id="slot2_valueFontSize" />
+            </div>
+            <span value="20">20</span>
+          </div>
+        </div>
+        <div type="range" class="sdpi-item">
+          <div class="sdpi-item-label">Graph height</div>
+          <div class="sdpi-item-value">
+            <span value="10">10</span>
+            <div class="range-wrap">
+              <span class="range-val">100</span>
+              <input type="range" min="10" max="100" step="5" value="100" id="slot2_graphHeightPct" />
+            </div>
+            <span value="100">100%</span>
+          </div>
+        </div>
+        <div type="range" class="sdpi-item">
+          <div class="sdpi-item-label">Line thickness</div>
+          <div class="sdpi-item-value">
+            <span value="1">1</span>
+            <div class="range-wrap">
+              <span class="range-val">1</span>
+              <input type="range" min="1" max="4" step="1" value="1" id="slot2_graphLineThickness" />
+            </div>
+            <span value="4">4</span>
+          </div>
+        </div>
+        <div class="sdpi-item show-label-row">
+          <div class="sdpi-item-label">Text stroke</div>
+          <div class="show-label-cell">
+            <input type="checkbox" class="show-label-checkbox" id="slot2_textStroke" />
+          </div>
+          <div class="sdpi-item-label empty"></div>
+          <div class="show-label-cell show-label-cell-spacer" aria-hidden="true"></div>
+        </div>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Stroke color</div>
+          <input class="sdpi-item-value" type="color" id="slot2_textStrokeColor" value="#000000" />
+        </div>
+      </details>
+      <details>
+        <summary>Advanced</summary>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Format</div>
+          <input class="sdpi-item-value" type="text" id="slot2_format" placeholder="%.0f" />
+        </div>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Divisor</div>
+          <input class="sdpi-item-value" type="text" id="slot2_divisor" placeholder="e.g. 1000" />
+        </div>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Graph unit</div>
+          <select class="sdpi-item-value select" id="slot2_graphUnit">
+            <option value="">None</option>
+            <option value="B">B</option>
+            <option value="KB">KB</option>
+            <option value="MB">MB</option>
+            <option value="GB">GB</option>
+            <option value="TB">TB</option>
+          </select>
+        </div>
+      </details>
+      <details>
+        <summary>Thresholds</summary>
+        <div id="slot2_thresholdsContainer"></div>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Add New</div>
+          <div class="sdpi-item-value" style="display: flex; align-items: center; gap: 4px;">
+            <input type="text" id="slot2_newThresholdName" placeholder="Name" style="width: 100px;" />
+            <button id="slot2_addThresholdBtn" style="width: 60px;">Add</button>
+          </div>
+        </div>
+        <div id="slot2_globalRefsContainer"></div>
+      </details>
+    </div>
+
+    <!-- Slot 3 -->
+    <div class="slot-section" id="slot-section-3" style="display:none">
+      <div class="sdpi-heading">Slot 4</div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Sensor</div>
+        <select class="sdpi-item-value select slot-sensor-select" id="slot3_sensorSelect" disabled>
+          <option>Loading...</option>
+        </select>
+      </div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Reading</div>
+        <select class="sdpi-item-value select slot-reading-select" id="slot3_readingSelect" disabled>
+          <option></option>
+        </select>
+      </div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Label</div>
+        <input class="sdpi-item-value" type="text" id="slot3_title" placeholder="Auto" />
+      </div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Mode</div>
+        <select class="sdpi-item-value select" id="slot3_mode">
+          <option value="">Use tile mode</option>
+          <option value="text">Text only</option>
+          <option value="graph">Graph only</option>
+          <option value="both">Graph + Text</option>
+        </select>
+      </div>
+      <details>
+        <summary>Colors &amp; Alpha</summary>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Highlight</div>
+          <input class="sdpi-item-value" type="color" id="slot3_highlightColor" value="#9E009E" />
+        </div>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Fill</div>
+          <input class="sdpi-item-value" type="color" id="slot3_foregroundColor" value="#500050" />
+        </div>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Value text</div>
+          <input class="sdpi-item-value" type="color" id="slot3_valueTextColor" value="#ffffff" />
+        </div>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Title text</div>
+          <input class="sdpi-item-value" type="color" id="slot3_titleColor" value="#b7b7b7" />
+        </div>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Background</div>
+          <input class="sdpi-item-value" type="color" id="slot3_backgroundColor" value="#000000" />
+        </div>
+        <div type="range" class="sdpi-item">
+          <div class="sdpi-item-label">Fill alpha</div>
+          <div class="sdpi-item-value">
+            <span value="0">0</span>
+            <div class="range-wrap">
+              <span class="range-val">55</span>
+              <input type="range" min="0" max="100" step="1" value="55" id="slot3_fillAlpha" />
+            </div>
+            <span value="100">100</span>
+          </div>
+        </div>
+      </details>
+      <details>
+        <summary>Scaling &amp; Font</summary>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Min / Max</div>
+          <div class="sdpi-item" style="margin-left:-4px">
+            <input class="sdpi-item-value" style="width:4em" placeholder="Min" type="number" id="slot3_min" />
+            <input class="sdpi-item-value" style="margin-left:-7px;width:4em" placeholder="Max" type="number" id="slot3_max" />
+          </div>
+        </div>
+        <div type="range" class="sdpi-item">
+          <div class="sdpi-item-label">Title size</div>
+          <div class="sdpi-item-value">
+            <span value="8">8</span>
+            <div class="range-wrap">
+              <span class="range-val">9</span>
+              <input type="range" min="8" max="20" step="0.5" value="9" id="slot3_titleFontSize" />
+            </div>
+            <span value="20">20</span>
+          </div>
+        </div>
+        <div type="range" class="sdpi-item">
+          <div class="sdpi-item-label">Value size</div>
+          <div class="sdpi-item-value">
+            <span value="8">8</span>
+            <div class="range-wrap">
+              <span class="range-val">10.5</span>
+              <input type="range" min="8" max="20" step="0.5" value="10.5" id="slot3_valueFontSize" />
+            </div>
+            <span value="20">20</span>
+          </div>
+        </div>
+        <div type="range" class="sdpi-item">
+          <div class="sdpi-item-label">Graph height</div>
+          <div class="sdpi-item-value">
+            <span value="10">10</span>
+            <div class="range-wrap">
+              <span class="range-val">100</span>
+              <input type="range" min="10" max="100" step="5" value="100" id="slot3_graphHeightPct" />
+            </div>
+            <span value="100">100%</span>
+          </div>
+        </div>
+        <div type="range" class="sdpi-item">
+          <div class="sdpi-item-label">Line thickness</div>
+          <div class="sdpi-item-value">
+            <span value="1">1</span>
+            <div class="range-wrap">
+              <span class="range-val">1</span>
+              <input type="range" min="1" max="4" step="1" value="1" id="slot3_graphLineThickness" />
+            </div>
+            <span value="4">4</span>
+          </div>
+        </div>
+        <div class="sdpi-item show-label-row">
+          <div class="sdpi-item-label">Text stroke</div>
+          <div class="show-label-cell">
+            <input type="checkbox" class="show-label-checkbox" id="slot3_textStroke" />
+          </div>
+          <div class="sdpi-item-label empty"></div>
+          <div class="show-label-cell show-label-cell-spacer" aria-hidden="true"></div>
+        </div>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Stroke color</div>
+          <input class="sdpi-item-value" type="color" id="slot3_textStrokeColor" value="#000000" />
+        </div>
+      </details>
+      <details>
+        <summary>Advanced</summary>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Format</div>
+          <input class="sdpi-item-value" type="text" id="slot3_format" placeholder="%.0f" />
+        </div>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Divisor</div>
+          <input class="sdpi-item-value" type="text" id="slot3_divisor" placeholder="e.g. 1000" />
+        </div>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Graph unit</div>
+          <select class="sdpi-item-value select" id="slot3_graphUnit">
+            <option value="">None</option>
+            <option value="B">B</option>
+            <option value="KB">KB</option>
+            <option value="MB">MB</option>
+            <option value="GB">GB</option>
+            <option value="TB">TB</option>
+          </select>
+        </div>
+      </details>
+      <details>
+        <summary>Thresholds</summary>
+        <div id="slot3_thresholdsContainer"></div>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Add New</div>
+          <div class="sdpi-item-value" style="display: flex; align-items: center; gap: 4px;">
+            <input type="text" id="slot3_newThresholdName" placeholder="Name" style="width: 100px;" />
+            <button id="slot3_addThresholdBtn" style="width: 60px;">Add</button>
+          </div>
+        </div>
+        <div id="slot3_globalRefsContainer"></div>
+      </details>
+    </div>
+
+    <!-- Shared template for composite slot threshold items -->
+    <template id="compositeThresholdTemplate">
+      <div class="threshold-item" data-threshold-id="">
+        <div class="sdpi-item" style="margin-top: 8px;">
+          <div class="sdpi-item-label threshold-header-label">
+            <input type="text" class="threshold-name" placeholder="Name" style="width: 70px;" />
+          </div>
+          <div class="sdpi-item-value threshold-header-value" style="display: flex; align-items: center; gap: 4px;">
+            <button class="threshold-toggle" style="width: 26px; padding: 0;">on</button>
+            <span class="threshold-arrows">
+              <button class="threshold-move-up" style="width: 18px; padding: 0;" title="Move up">&uarr;</button>
+              <button class="threshold-move-down" style="width: 18px; padding: 0;" title="Move down">&darr;</button>
+            </span>
+            <button class="threshold-remove" style="width: 18px; padding: 0; background: #a33; color: white;" title="Remove">×</button>
+          </div>
+        </div>
+
+        <div class="threshold-settings" style="display: none;">
+          <div class="sdpi-item">
+            <div class="sdpi-item-label">Text</div>
+            <input type="text" class="sdpi-item-value threshold-text" placeholder="e.g. HOT or Hot {value}" />
+          </div>
+          <div class="sdpi-item">
+            <div class="sdpi-item-label">Condition</div>
+            <div class="sdpi-item-value" style="display: flex; align-items: center; gap: 4px;">
+              <select class="threshold-operator" style="width: 55px;">
+                <option value=">">&gt;</option>
+                <option value="<">&lt;</option>
+                <option value=">=" selected>&gt;=</option>
+                <option value="<=">&lt;=</option>
+                <option value="==">==</option>
+              </select>
+              <input type="number" class="threshold-value" step="any" style="width: 60px;" placeholder="Value" />
+            </div>
+          </div>
+
+          <div class="sdpi-item threshold-advanced-toggle-row">
+            <div class="sdpi-item-label threshold-empty-label"></div>
+            <div class="sdpi-item-value threshold-advanced-toggle-cell">
+              <button class="threshold-advanced-toggle" type="button">Advanced</button>
+            </div>
+          </div>
+
+          <div class="threshold-advanced-panel" style="display: none;">
+            <div class="sdpi-item threshold-compact-row">
+              <div class="sdpi-item-label">Hyst</div>
+              <input type="number" class="sdpi-item-value threshold-hysteresis threshold-input-compact" step="any" placeholder="1" />
+            </div>
+            <div class="sdpi-item threshold-compact-row">
+              <div class="sdpi-item-label">Dwell ms</div>
+              <input type="number" class="sdpi-item-value threshold-dwell threshold-input-compact" step="100" min="0" placeholder="1000" />
+            </div>
+            <div class="sdpi-item threshold-compact-row">
+              <div class="sdpi-item-label">Cooldown ms</div>
+              <input type="number" class="sdpi-item-value threshold-cooldown threshold-input-compact" step="100" min="0" placeholder="5000" />
+            </div>
+            <div class="sdpi-item threshold-sticky-row">
+              <div class="sdpi-item-label">Sticky</div>
+              <div class="sdpi-item-value threshold-sticky-cell">
+                <button class="threshold-sticky-toggle" type="button">off</button>
+              </div>
+            </div>
+          </div>
+
+          <div type="color" class="sdpi-item">
+            <div class="sdpi-item-label">Background</div>
+            <input type="color" class="sdpi-item-value threshold-bg" value="#333300" />
+            <div class="sdpi-item-label">Value Text</div>
+            <input type="color" class="sdpi-item-value threshold-vt" value="#ffff00" />
+          </div>
+
+          <div type="color" class="sdpi-item">
+            <div class="sdpi-item-label">Foreground</div>
+            <input type="color" class="sdpi-item-value threshold-fg" value="#999900" />
+            <div class="sdpi-item-label">Highlight</div>
+            <input type="color" class="sdpi-item-value threshold-hl" value="#ffff00" />
+          </div>
+
+          <div type="color" class="sdpi-item">
+            <div class="sdpi-item-label">Alert Text</div>
+            <input type="color" class="sdpi-item-value threshold-tc" value="#ffffff" />
+          </div>
+        </div>
+      </div>
+    </template>
+
+  </div><!-- #ui -->
+
+  <script src="pi_utils.js?v=V5-prep.26"></script>
+  <script src="composite_pi.js?v=V5-prep.26"></script>
+</body>
+</html>

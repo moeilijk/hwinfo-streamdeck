@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport"
+    content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,minimal-ui,viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  <title>HWiNFO Settings</title>
+  <link rel="stylesheet" href="css/sdpi.css" />
+  <link rel="stylesheet" href="css/local.css" />
+</head>
+
+<body>
+  <div class="sdpi-wrapper localbody">
+    <div class="sdpi-heading">Refresh Rate</div>
+
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">Interval</div>
+      <select class="sdpi-item-value select" id="pollInterval">
+        <option value="250">250ms</option>
+        <option value="500">500ms</option>
+        <option value="1000" selected>1s (Default)</option>
+        <option value="2000">2s</option>
+        <option value="5000">5s</option>
+        <option value="10000">10s</option>
+      </select>
+    </div>
+
+    <div class="sdpi-item">
+      <details class="message info">
+        <summary>Info</summary>
+        <p>Lower values = faster updates but higher CPU usage.</p>
+        <p>Tiles follow the HWiNFO polling rate; readings can never update faster than HWiNFO scans its sensors.</p>
+        <p>Changes apply immediately to all sensor tiles.</p>
+      </details>
+    </div>
+
+    <details>
+      <summary>Tile Appearance</summary>
+
+      <div type="color" class="sdpi-item">
+        <div class="sdpi-item-label">Background</div>
+        <input type="color" class="sdpi-item-value" id="tileBackground" value="#000000" />
+        <div class="sdpi-item-label">Text</div>
+        <input type="color" class="sdpi-item-value" id="tileTextColor" value="#ffffff" />
+      </div>
+
+      <div class="sdpi-item show-label-row">
+        <div class="sdpi-item-label">Show Background</div>
+        <div class="show-label-cell">
+          <input type="checkbox" class="show-label-checkbox" id="showLabel" checked />
+        </div>
+        <div class="sdpi-item-label empty"></div>
+        <div class="show-label-cell show-label-cell-spacer" aria-hidden="true"></div>
+      </div>
+    </details>
+
+    <details>
+      <summary>Global Thresholds</summary>
+
+      <div id="globalThresholdsContainer">
+      <!-- Dynamic global threshold items will be rendered here -->
+    </div>
+
+    <div class="sdpi-item" id="addGlobalThresholdContainer">
+      <div class="sdpi-item-label">Add New</div>
+      <div class="sdpi-item-value" style="display: flex; align-items: center; gap: 4px;">
+        <input type="text" id="newGlobalThresholdName" placeholder="Name" style="width: 100px;" />
+        <button id="addGlobalThresholdBtn" class="sdpi-item-value" style="width: 60px;" type="button">Add</button>
+      </div>
+    </div>
+
+    </details>
+
+    <!-- Template for global threshold items -->
+    <template id="globalThresholdTemplate">
+      <div class="threshold-item" data-threshold-id="">
+        <div class="sdpi-item" style="margin-top: 8px;">
+          <div class="sdpi-item-label threshold-header-label">
+            <input type="text" class="threshold-name" placeholder="Name" style="width: 70px;" />
+          </div>
+          <div class="sdpi-item-value threshold-header-value" style="display: flex; align-items: center; gap: 4px;">
+            <button class="threshold-toggle" style="width: 26px; padding: 0;">on</button>
+            <button class="threshold-remove" style="width: 18px; padding: 0; background: #a33; color: white;" title="Remove">×</button>
+          </div>
+        </div>
+        <div class="threshold-settings" style="display: none;">
+          <div class="sdpi-item">
+            <div class="sdpi-item-label">Text</div>
+            <input type="text" class="sdpi-item-value threshold-text" placeholder="e.g. HOT or Hot {value}" />
+          </div>
+          <div class="sdpi-item">
+            <div class="sdpi-item-label">Sensor type</div>
+            <select class="sdpi-item-value threshold-reading-type" style="width: 120px;">
+              <option value="">All types</option>
+              <option value="Temp">Temperature</option>
+              <option value="Volt">Voltage</option>
+              <option value="Fan">Fan</option>
+              <option value="Current">Current</option>
+              <option value="Power">Power</option>
+              <option value="Clock">Clock</option>
+              <option value="Usage">Usage</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="sdpi-item">
+            <div class="sdpi-item-label">Condition</div>
+            <div class="sdpi-item-value" style="display: flex; align-items: center; gap: 4px;">
+              <select class="threshold-operator" style="width: 55px;">
+                <option value=">">&gt;</option>
+                <option value="<">&lt;</option>
+                <option value=">=" selected>&gt;=</option>
+                <option value="<=">&lt;=</option>
+                <option value="==">==</option>
+              </select>
+              <input type="number" class="threshold-value" step="any" style="width: 60px;" placeholder="Value" />
+            </div>
+          </div>
+          <div class="sdpi-item threshold-advanced-toggle-row">
+            <div class="sdpi-item-label threshold-empty-label"></div>
+            <div class="sdpi-item-value threshold-advanced-toggle-cell">
+              <button class="threshold-advanced-toggle" type="button">Advanced</button>
+            </div>
+          </div>
+          <div class="threshold-advanced-panel" style="display: none;">
+            <div class="sdpi-item threshold-compact-row">
+              <div class="sdpi-item-label">Hyst</div>
+              <input type="number" class="sdpi-item-value threshold-hysteresis threshold-input-compact" step="any" placeholder="1" />
+            </div>
+            <div class="sdpi-item threshold-compact-row">
+              <div class="sdpi-item-label">Dwell ms</div>
+              <input type="number" class="sdpi-item-value threshold-dwell threshold-input-compact" step="100" min="0" placeholder="1000" />
+            </div>
+            <div class="sdpi-item threshold-compact-row">
+              <div class="sdpi-item-label">Cooldown ms</div>
+              <input type="number" class="sdpi-item-value threshold-cooldown threshold-input-compact" step="100" min="0" placeholder="5000" />
+            </div>
+            <div class="sdpi-item threshold-sticky-row">
+              <div class="sdpi-item-label">Sticky</div>
+              <div class="sdpi-item-value threshold-sticky-cell">
+                <button class="threshold-sticky-toggle" type="button">off</button>
+              </div>
+            </div>
+          </div>
+          <div type="color" class="sdpi-item">
+            <div class="sdpi-item-label">Background</div>
+            <input type="color" class="sdpi-item-value threshold-bg" value="#333300" />
+            <div class="sdpi-item-label">Value Text</div>
+            <input type="color" class="sdpi-item-value threshold-vt" value="#ffff00" />
+          </div>
+          <div type="color" class="sdpi-item">
+            <div class="sdpi-item-label">Foreground</div>
+            <input type="color" class="sdpi-item-value threshold-fg" value="#999900" />
+            <div class="sdpi-item-label">Highlight</div>
+            <input type="color" class="sdpi-item-value threshold-hl" value="#ffff00" />
+          </div>
+          <div type="color" class="sdpi-item">
+            <div class="sdpi-item-label">Alert Text</div>
+            <input type="color" class="sdpi-item-value threshold-tc" value="#ffffff" />
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <div class="sdpi-heading">Status</div>
+
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">HWiNFO Connection</div>
+      <div class="sdpi-item-value" id="connectionStatus" style="color: #999;">Checking...</div>
+    </div>
+
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">Current Rate</div>
+      <div class="sdpi-item-value" id="currentRate" style="color: #999;">--</div>
+    </div>
+  </div>
+
+  <script src="settings_pi.js"></script>
+</body>
+
+</html>

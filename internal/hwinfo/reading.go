@@ -1,3 +1,5 @@
+//go:build windows
+
 package hwinfo
 
 /*
@@ -8,7 +10,7 @@ import "C"
 import (
 	"unsafe"
 
-	"github.com/shayne/hwinfo-streamdeck/internal/hwinfo/util"
+	"github.com/moeilijk/hwinfo-streamdeck/internal/hwinfo/util"
 )
 
 // ReadingType enum of value/unit type for reading

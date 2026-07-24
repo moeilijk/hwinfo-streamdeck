@@ -1,10 +1,12 @@
+//go:build windows
+
 package plugin
 
 import (
 	"fmt"
 	"sync"
 
-	"github.com/shayne/hwinfo-streamdeck/internal/hwinfo"
+	"github.com/moeilijk/hwinfo-streamdeck/internal/hwinfo"
 )
 
 // Service wraps hwinfo shared mem streaming

@@ -30,3 +30,52 @@ cmd/hwinfostreamdeckplugin/debug
 
 # dep cache (protoc)
 .cache/
+
+# Local build caches (never commit)
+.gocache/
+.gomodcache/
+
+# build artifacts
+build/*.streamDeckPlugin
+build/*.sdPlugin
+
+# local build version tracking
+.last_patch
+
+# Node dependencies
+node_modules/
+
+# Local AI handoff docs (keep local, never push)
+docs/
+
+# AI agent instructions (local only)
+CLAUDE.md
+AGENTS.md
+.github/copilot-instructions.md
+
+# Codex agent artifact (internal, never commit)
+.codex
+
+# Local implementation plans (keep local, never push)
+PLAN-*.md
+
+# Mockup tool and output (internal use only)
+cmd/composite_mockup/
+mockup_output/
+
+# Local example/test data
+example.json
+
+# Plugin Linux binaries (built by deploy-deckbridge.sh)
+com.exension.hwinfo.sdPlugin/hwinfo
+com.exension.hwinfo.sdPlugin/lhm-bridge
+com.exension.hwinfo.sdPlugin/hwinfo.log
+
+# Mock sensor server binary (built to repo root by go build)
+/mock-sensor-server
+
+# local build artifacts
+/mock-bridge
+/hwinfo
+com.exension.hwinfo.sdPlugin/hwinfo
+com.exension.hwinfo.sdPlugin/mock-bridge

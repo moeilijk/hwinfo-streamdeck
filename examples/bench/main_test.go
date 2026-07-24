@@ -8,7 +8,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/shayne/hwinfo-streamdeck/pkg/graph"
+	"github.com/moeilijk/hwinfo-streamdeck/pkg/graph"
 )
 
 func BenchmarkFoo(b *testing.B) {

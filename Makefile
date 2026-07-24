@@ -1,16 +1,22 @@
 GOCMD=go
 GOBUILD=$(GOCMD) build
 GOCLEAN=$(GOCMD) clean
+GOOS?=windows
+GOARCH?=amd64
+GOTARGETENV=GOOS=$(GOOS) GOARCH=$(GOARCH)
+# The HWiNFO shared-memory bridge is cgo; cross-compiling from Linux/WSL needs mingw-w64.
+WINCC?=x86_64-w64-mingw32-gcc
+CGOWINENV=CGO_ENABLED=1 CC=$(WINCC)
 
 SDPLUGINDIR=./com.exension.hwinfo.sdPlugin
 
 PROTOS=$(wildcard ./*/**/**/*.proto)
 PROTOPB=$(PROTOS:.proto=.pb.go)
 
-plugin: proto
-	$(GOBUILD) -o $(SDPLUGINDIR)/hwinfo.exe ./cmd/hwinfo_streamdeck_plugin
-	$(GOBUILD) -o $(SDPLUGINDIR)/hwinfo-plugin.exe ./cmd/hwinfo-plugin
-	cp ../go-hwinfo-hwservice-plugin/bin/hwinfo-plugin.exe $(SDPLUGINDIR)/hwinfo-plugin.exe
+# The plugin ships hwinfo.exe + hwinfo-bridge.exe; Windows only.
+plugin:
+	$(GOTARGETENV) $(GOBUILD) -o $(SDPLUGINDIR)/hwinfo.exe ./cmd/hwinfo_streamdeck_plugin
+	$(GOTARGETENV) $(CGOWINENV) $(GOBUILD) -o $(SDPLUGINDIR)/hwinfo-bridge.exe ./cmd/hwinfo-bridge
 	-@install-plugin.bat
 
 proto: $(PROTOPB)
@@ -25,16 +31,25 @@ $(PROTOPB): $(PROTOS)
 
 # plugin:
 # 	-@kill-streamdeck.bat
-# 	@go build -o com.exension.hwinfo.sdPlugin\\hwinfo.exe github.com/shayne/hwinfo-streamdeck/cmd/hwinfo_streamdeck_plugin
 # 	@xcopy com.exension.hwinfo.sdPlugin $(APPDATA)\\Elgato\\StreamDeck\\Plugins\\com.exension.hwinfo.sdPlugin\\ /E /Q /Y
 # 	@start-streamdeck.bat
 
 debug:
-	$(GOBUILD) -o $(SDPLUGINDIR)/hwinfo.exe ./cmd/hwinfo_debugger
-	cp ../go-grpc-hardware-service/bin/hwinfo-plugin.exe $(SDPLUGINDIR)/hwinfo-plugin.exe
+	$(GOTARGETENV) $(GOBUILD) -o $(SDPLUGINDIR)/hwinfo.exe ./cmd/hwinfo_debugger
 	-@install-plugin.bat
 # @xcopy com.exension.hwinfo.sdPlugin $(APPDATA)\\Elgato\\StreamDeck\\Plugins\\com.exension.hwinfo.sdPlugin\\ /E /Q /Y
 
-release:
+verify:
+	$(GOTARGETENV) $(CGOWINENV) $(GOCMD) build ./...
+	$(GOCMD) test $$($(GOCMD) list ./... 2>/dev/null | grep -v 'cmd/hwinfo_streamdeck_plugin\|cmd/hwinfo_debugger\|app/hwinfostreamdeckplugin')
+	bash scripts/verify-settings-pi.sh
+	streamdeck validate $(SDPLUGINDIR)
+
+release: verify plugin
 	-@rm build/com.exension.hwinfo.streamDeckPlugin
-	@DistributionTool.exe -b -i com.exension.hwinfo.sdPlugin -o build
+	@rm -f $(SDPLUGINDIR)/hwinfo $(SDPLUGINDIR)/mock-bridge
+	streamdeck pack com.exension.hwinfo.sdPlugin --output build --force
+
+# Version bumps are explicit. Commit/release paths must not mutate manifest.json.
+bump-version:
+	./scripts/bump-manifest-version.sh

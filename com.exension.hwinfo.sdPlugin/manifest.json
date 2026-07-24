@@ -1,41 +1,118 @@
 {
-  "SDKVersion": 2,
-  "Software": {
-    "MinimumVersion": "4.1"
-  },
-  "Actions": [
-    {
-      "Icon": "icon",
-      "Name": "HWiNFO",
-      "States": [
-        {
-          "Image": "defaultImage",
-          "TitleAlignment": "top",
-          "FontSize": "9",
-          "TitleColor": "#b7b7b7",
-          "ShowTitle": false
-        }
-      ],
-      "SupportedInMultiActions": false,
-      "Tooltip": "Display sensor readings from HWiNFO",
-      "UUID": "com.exension.hwinfo.reading"
-    }
-  ],
-  "Author": "shayne",
-  "CodePathWin": "hwinfo.exe",
-  "PropertyInspectorPath": "index_pi.html",
-  "Description": "Display sensor readings from HWiNFO64. This plugin is not affiliated with HWiNFO64, for more information and to download HWiNFO64 visit https://www.hwinfo.com",
-  "Name": "HWiNFO",
-  "Icon": "pluginIcon",
-  "URL": "https://github.com/shayne/hwinfo-streamdeck",
-  "Version": "2.0.5",
-  "ApplicationsToMonitor": {
-    "windows": ["HWiNFO64.EXE", "HWiNFO64.exe"]
-  },
-  "OS": [
-    {
-      "Platform": "windows",
-      "MinimumVersion": "10"
-    }
-  ]
+	"$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
+	"SDKVersion": 3,
+	"Software": {
+		"MinimumVersion": "6.9"
+	},
+	"Actions": [
+		{
+			"Icon": "actionIcon",
+			"Name": "HWiNFO",
+			"States": [
+				{
+					"Image": "defaultImage",
+					"TitleAlignment": "top",
+					"FontSize": 9,
+					"TitleColor": "#b7b7b7",
+					"ShowTitle": false
+				}
+			],
+			"SupportedInMultiActions": false,
+			"Tooltip": "Display a sensor reading from HWiNFO or Libre Hardware Monitor",
+			"UUID": "com.exension.hwinfo.reading"
+		},
+		{
+			"Icon": "actionIcon_composite",
+			"Name": "HWiNFO Composite Dashboard",
+			"States": [
+				{
+					"Image": "defaultImage",
+					"ShowTitle": false
+				}
+			],
+			"SupportedInMultiActions": false,
+			"Tooltip": "Display 2\u20134 sensor readings on one tile with overlaid graphs",
+			"UUID": "com.exension.hwinfo.composite",
+			"PropertyInspectorPath": "composite_pi.html"
+		},
+		{
+			"Icon": "actionIcon_derived",
+			"Name": "HWiNFO Derived Metric",
+			"States": [
+				{
+					"Image": "defaultImage",
+					"ShowTitle": false
+				}
+			],
+			"SupportedInMultiActions": false,
+			"Tooltip": "Aggregate 2\u20138 sensor readings with sum, average, max, min, delta or pct formula",
+			"UUID": "com.exension.hwinfo.derived",
+			"PropertyInspectorPath": "derived_pi.html"
+		},
+		{
+			"Icon": "actionIcon",
+			"Name": "HWiNFO Dial Carousel",
+			"Controllers": [
+				"Encoder"
+			],
+			"Encoder": {
+				"layout": "$A0",
+				"TriggerDescription": {
+					"Rotate": "Cycle reading"
+				}
+			},
+			"States": [
+				{
+					"Image": "defaultImage",
+					"ShowTitle": false
+				}
+			],
+			"SupportedInMultiActions": false,
+			"Tooltip": "Display one sensor reading on the Stream Deck+ touch strip and rotate the dial to cycle readings",
+			"UUID": "com.exension.hwinfo.dial",
+			"PropertyInspectorPath": "dial_pi.html"
+		},
+		{
+			"Icon": "actionIcon_gear_white",
+			"Name": "HWiNFO Settings",
+			"States": [
+				{
+					"Image": "settingsImage",
+					"Title": "Refresh Rate",
+					"TitleAlignment": "top",
+					"FontSize": 9,
+					"TitleColor": "#b7b7b7",
+					"ShowTitle": false
+				}
+			],
+			"SupportedInMultiActions": false,
+			"Tooltip": "Configure HWiNFO plugin settings and sensor sources",
+			"UUID": "com.exension.hwinfo.settings",
+			"PropertyInspectorPath": "settings_pi.html"
+		}
+	],
+	"Author": "moeilijk",
+	"CodePath": "hwinfo.exe",
+	"PropertyInspectorPath": "index_pi.html",
+	"Description": "Display hardware sensor readings from HWiNFO64 (shared memory) or Libre Hardware Monitor (HTTP). Not affiliated with HWiNFO64; see https://www.hwinfo.com",
+	"Name": "HWiNFO",
+	"UUID": "com.exension.hwinfo",
+	"Icon": "pluginIcon",
+	"CategoryIcon": "categoryIcon",
+	"URL": "https://github.com/moeilijk/hwinfo-streamdeck",
+	"Version": "3.0.0.0",
+	"ApplicationsToMonitor": {
+		"windows": [
+			"HWiNFO64.EXE",
+			"HWiNFO64.exe",
+			"LibreHardwareMonitor.exe"
+		]
+	},
+	"OS": [
+		{
+			"Platform": "windows",
+			"MinimumVersion": "10"
+		}
+	],
+	"Category": "HWiNFO"
 }

@@ -1,8 +1,12 @@
+//go:build windows
+
 package plugin
 
 import (
-	"github.com/shayne/hwinfo-streamdeck/internal/hwinfo"
-	hwsensorsservice "github.com/shayne/hwinfo-streamdeck/pkg/service"
+	"time"
+
+	"github.com/moeilijk/hwinfo-streamdeck/internal/hwinfo"
+	hwsensorsservice "github.com/moeilijk/hwinfo-streamdeck/pkg/service"
 )
 
 // Plugin implementation
@@ -16,7 +20,9 @@ func (p *Plugin) PollTime() (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	return shmem.PollTime(), nil
+	// The HardwareService contract is Unix nanoseconds; HWiNFO's
+	// dwLastUpdate is Unix seconds.
+	return shmem.PollTime() * uint64(time.Second), nil
 }
 
 // Sensors implementation for plugin
@@ -67,4 +73,8 @@ func (r reading) Type() string {
 
 func (r reading) TypeI() int32 {
 	return int32(r.Reading.Type())
+}
+
+func (r reading) ValueNormalized() float64 {
+	return hwsensorsservice.NormalizeToBytes(r.Value(), r.Unit())
 }

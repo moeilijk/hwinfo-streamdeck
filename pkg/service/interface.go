@@ -2,11 +2,12 @@ package hwsensorsservice
 
 import (
 	"context"
+	"strings"
 
 	"google.golang.org/grpc"
 
 	"github.com/hashicorp/go-plugin"
-	"github.com/shayne/hwinfo-streamdeck/pkg/service/proto"
+	"github.com/moeilijk/hwinfo-streamdeck/pkg/service/proto"
 )
 
 // Handshake is a common handshake that is shared by plugin and host.
@@ -91,6 +92,7 @@ type Reading interface {
 	Label() string
 	Unit() string
 	Value() float64
+	ValueNormalized() float64
 	ValueMin() float64
 	ValueMax() float64
 	ValueAvg() float64
@@ -136,6 +138,10 @@ func (r reading) Value() float64 {
 	return r.Reading.GetValue()
 }
 
+func (r reading) ValueNormalized() float64 {
+	return NormalizeToBytes(r.Reading.GetValue(), r.Reading.GetUnit())
+}
+
 func (r reading) ValueMin() float64 {
 	return r.Reading.GetValueMin()
 }
@@ -146,4 +152,25 @@ func (r reading) ValueMax() float64 {
 
 func (r reading) ValueAvg() float64 {
 	return r.Reading.GetValueAvg()
+}
+
+// NormalizeToBytes converts a value with a data size unit (KB, MB, GB, TB) to bytes.
+// This ensures consistent graph scaling when units change dynamically.
+func NormalizeToBytes(value float64, unit string) float64 {
+	unitLower := strings.ToLower(unit)
+
+	switch {
+	case strings.HasPrefix(unitLower, "tb") || strings.HasPrefix(unitLower, "tib"):
+		return value * 1024 * 1024 * 1024 * 1024
+	case strings.HasPrefix(unitLower, "gb") || strings.HasPrefix(unitLower, "gib"):
+		return value * 1024 * 1024 * 1024
+	case strings.HasPrefix(unitLower, "mb") || strings.HasPrefix(unitLower, "mib"):
+		return value * 1024 * 1024
+	case strings.HasPrefix(unitLower, "kb") || strings.HasPrefix(unitLower, "kib"):
+		return value * 1024
+	case strings.HasPrefix(unitLower, "b/") || unitLower == "b":
+		return value
+	default:
+		return value
+	}
 }

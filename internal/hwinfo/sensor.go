@@ -1,3 +1,5 @@
+//go:build windows
+
 package hwinfo
 
 /*
@@ -10,7 +12,7 @@ import (
 	"strconv"
 	"unsafe"
 
-	"github.com/shayne/hwinfo-streamdeck/internal/hwinfo/util"
+	"github.com/moeilijk/hwinfo-streamdeck/internal/hwinfo/util"
 )
 
 // Sensor element (e.g. motherboard, cpu, gpu...)

@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Versioning is manual. Do not mutate manifest.json during commit.

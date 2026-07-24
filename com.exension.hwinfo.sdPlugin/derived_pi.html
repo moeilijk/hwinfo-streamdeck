@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no" />
+  <title>HWiNFO Derived Metric</title>
+  <link rel="stylesheet" href="css/sdpi.css" />
+  <link rel="stylesheet" href="css/local.css" />
+  <style>
+    #error { display: none; }
+    .slot-section { border-top: 1px solid #444; margin-top: 4px; }
+    .slot-sensor-select, .slot-reading-select { max-width: 226px; padding-right: 25px; font-family: monospace; }
+    .slot-sensor-select option, .slot-reading-select option { font-family: monospace; }
+    details code { background: #2a2a2a; color: #7ecfff; border-radius: 3px; padding: 1px 5px; font-family: monospace; font-size: 9pt; }
+  </style>
+</head>
+<body>
+
+  <div id="error" class="sdpi-wrapper localbody hiddenx">
+    <div class="sdpi-heading">Plugin Error</div>
+    <div class="sdpi-item">
+      <details open class="message caution">
+        <summary>Unable To Communicate With Sensor Source</summary>
+        <p>The plugin is unable to communicate with the configured sensor source.</p>
+        <p>Make sure it's running and the remote web server is enabled on port 8085.</p>
+      </details>
+    </div>
+  </div>
+
+  <div id="ui" class="sdpi-wrapper localbody hiddenx">
+
+    <div class="sdpi-heading">Source</div>
+
+
+    <div class="sdpi-heading">Tile Settings</div>
+
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">Formula</div>
+      <select class="sdpi-item-value select" id="derived_formula">
+        <option value="sum">Sum</option>
+        <option value="average">Average</option>
+        <option value="max">Max</option>
+        <option value="min">Min</option>
+        <option value="delta">Delta</option>
+        <option value="pct">Percent</option>
+      </select>
+    </div>
+
+    <div class="sdpi-item">
+      <details class="message info">
+        <summary>Formula reference</summary>
+        <p><strong>Sum</strong> — adds all slot values together.<br>
+           <code>A + B + C + …</code><br>
+           Example: fan 1 + fan 2 + fan 3 = total airflow.</p>
+        <p><strong>Average</strong> — sum divided by number of slots.<br>
+           <code>(A + B + C + …) ÷ n</code><br>
+           Example: average of all core temperatures.</p>
+        <p><strong>Max</strong> — the highest value across all slots.<br>
+           <code>max(A, B, C, …)</code><br>
+           Example: hottest core in the CPU.</p>
+        <p><strong>Min</strong> — the lowest value across all slots.<br>
+           <code>min(A, B, C, …)</code><br>
+           Example: coolest core in the CPU.</p>
+        <p><strong>Delta</strong> — second slot minus first. Fixed at 2 slots.<br>
+           <code>B − A</code><br>
+           Example: outlet temp − intake temp = heat added.</p>
+        <p><strong>Percent</strong> — first slot as share of the rest.<br>
+           <code>A ÷ (B + C + …) × 100</code><br>
+           Example: used RAM ÷ total RAM × 100 = usage %.</p>
+      </details>
+    </div>
+
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">Slots</div>
+      <select class="sdpi-item-value select" id="derived_slotCount">
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+        <option value="6">6</option>
+        <option value="7">7</option>
+        <option value="8">8</option>
+      </select>
+    </div>
+
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">All sensors</div>
+      <select class="sdpi-item-value select slot-sensor-select" id="allSlots_sensorSelect" disabled>
+        <option value="">Loading...</option>
+      </select>
+    </div>
+
+    <details>
+      <summary>Timing &amp; Smoothing</summary>
+
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Update every</div>
+        <select class="sdpi-item-value select" id="derived_updateIntervalOverrideMs">
+          <option value="0">Use global</option>
+          <option value="1000">1s</option>
+          <option value="2000">2s</option>
+          <option value="5000">5s</option>
+          <option value="10000">10s</option>
+          <option value="30000">30s</option>
+          <option value="60000">60s</option>
+        </select>
+      </div>
+
+      <div type="range" class="sdpi-item" id="derived_smoothingAlpha">
+        <div class="sdpi-item-label">Smoothing</div>
+        <div class="sdpi-item-value">
+          <span value="0.1">0.1</span>
+          <div class="range-wrap">
+            <span class="range-val">1</span>
+            <input type="range" min="0.1" max="1" step="0.1" value="1" />
+          </div>
+          <span value="1">1</span>
+        </div>
+      </div>
+    </details>
+
+    <details>
+      <summary>Appearance</summary>
+
+      <div type="range" class="sdpi-item">
+        <div class="sdpi-item-label">Title size</div>
+        <div class="sdpi-item-value">
+          <span value="8">8</span>
+          <div class="range-wrap">
+            <span class="range-val">10.5</span>
+            <input type="range" min="8" max="20" step="0.5" value="10.5" id="titleFontSize" />
+          </div>
+          <span value="20">20</span>
+        </div>
+      </div>
+
+      <div type="range" class="sdpi-item">
+        <div class="sdpi-item-label">Value size</div>
+        <div class="sdpi-item-value">
+          <span value="8">8</span>
+          <div class="range-wrap">
+            <span class="range-val">10.5</span>
+            <input type="range" min="8" max="20" step="0.5" value="10.5" id="valueFontSize" />
+          </div>
+          <span value="20">20</span>
+        </div>
+      </div>
+
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Highlight</div>
+        <input class="sdpi-item-value" type="color" id="derived_highlightColor" value="#009E00" />
+      </div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Fill</div>
+        <input class="sdpi-item-value" type="color" id="derived_foregroundColor" value="#005128" />
+      </div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Background</div>
+        <input class="sdpi-item-value" type="color" id="derived_backgroundColor" value="#000000" />
+      </div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Value text</div>
+        <input class="sdpi-item-value" type="color" id="derived_valueTextColor" value="#ffffff" />
+      </div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Title text</div>
+        <input class="sdpi-item-value" type="color" id="derived_titleColor" value="#b7b7b7" />
+      </div>
+      <div type="range" class="sdpi-item">
+        <div class="sdpi-item-label">Graph height</div>
+        <div class="sdpi-item-value">
+          <span value="10">10</span>
+          <div class="range-wrap">
+            <span class="range-val">100</span>
+            <input type="range" min="10" max="100" step="5" value="100" id="derived_graphHeightPct" />
+          </div>
+          <span value="100">100%</span>
+        </div>
+      </div>
+      <div type="range" class="sdpi-item">
+        <div class="sdpi-item-label">Line thickness</div>
+        <div class="sdpi-item-value">
+          <span value="1">1</span>
+          <div class="range-wrap">
+            <span class="range-val">1</span>
+            <input type="range" min="1" max="4" step="1" value="1" id="derived_graphLineThickness" />
+          </div>
+          <span value="4">4</span>
+        </div>
+      </div>
+      <div class="sdpi-item show-label-row">
+        <div class="sdpi-item-label">Text stroke</div>
+        <div class="show-label-cell">
+          <input type="checkbox" class="show-label-checkbox" id="derived_textStroke" />
+        </div>
+        <div class="sdpi-item-label empty"></div>
+        <div class="show-label-cell show-label-cell-spacer" aria-hidden="true"></div>
+      </div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Stroke color</div>
+        <input class="sdpi-item-value" type="color" id="derived_textStrokeColor" value="#000000" />
+      </div>
+    </details>
+
+    <details>
+      <summary>Advanced</summary>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Min / Max</div>
+        <div class="sdpi-item" style="margin-left:-4px">
+          <input class="sdpi-item-value" style="width:4em" placeholder="Min" type="number" id="derived_min" />
+          <input class="sdpi-item-value" style="margin-left:-7px;width:4em" placeholder="Max" type="number" id="derived_max" />
+        </div>
+      </div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Format</div>
+        <input class="sdpi-item-value" type="text" id="derived_format" placeholder="%.0f" />
+      </div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Divisor</div>
+        <input class="sdpi-item-value" type="text" id="derived_divisor" placeholder="e.g. 1000" />
+      </div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Graph unit</div>
+        <select class="sdpi-item-value select" id="derived_graphUnit">
+          <option value="">None</option>
+          <option value="B">B</option>
+          <option value="KB">KB</option>
+          <option value="MB">MB</option>
+          <option value="GB">GB</option>
+          <option value="TB">TB</option>
+        </select>
+      </div>
+    </details>
+
+    <details>
+      <summary>Presets</summary>
+
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Load</div>
+        <select class="sdpi-item-value select" id="preset_load">
+          <option value="">— select preset —</option>
+        </select>
+      </div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Save as</div>
+        <input class="sdpi-item-value" type="text" id="preset_saveas" placeholder="Preset name" />
+      </div>
+    </details>
+
+    <!-- Slot 0 -->
+    <div class="slot-section" id="slot-section-0">
+      <div class="sdpi-heading">Slot 1</div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Favorite</div>
+        <select class="sdpi-item-value select" id="slot0_favoriteSelect">
+          <option value="">— from favorite —</option>
+        </select>
+      </div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Sensor</div>
+        <select class="sdpi-item-value select slot-sensor-select" id="slot0_sensorSelect" disabled>
+          <option>Loading...</option>
+        </select>
+      </div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Reading</div>
+        <select class="sdpi-item-value select slot-reading-select" id="slot0_readingSelect" disabled>
+          <option></option>
+        </select>
+      </div>
+      <details>
+        <summary>Advanced</summary>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Divisor</div>
+          <input class="sdpi-item-value" type="text" id="slot0_divisor" placeholder="e.g. 1000" />
+        </div>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Graph unit</div>
+          <select class="sdpi-item-value select" id="slot0_graphUnit">
+            <option value="">None</option>
+            <option value="B">B</option>
+            <option value="KB">KB</option>
+            <option value="MB">MB</option>
+            <option value="GB">GB</option>
+            <option value="TB">TB</option>
+          </select>
+        </div>
+      </details>
+    </div>
+
+    <!-- Slot 1 -->
+    <div class="slot-section" id="slot-section-1">
+      <div class="sdpi-heading">Slot 2</div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Favorite</div>
+        <select class="sdpi-item-value select" id="slot1_favoriteSelect">
+          <option value="">— from favorite —</option>
+        </select>
+      </div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Sensor</div>
+        <select class="sdpi-item-value select slot-sensor-select" id="slot1_sensorSelect" disabled>
+          <option>Loading...</option>
+        </select>
+      </div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Reading</div>
+        <select class="sdpi-item-value select slot-reading-select" id="slot1_readingSelect" disabled>
+          <option></option>
+        </select>
+      </div>
+      <details>
+        <summary>Advanced</summary>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Divisor</div>
+          <input class="sdpi-item-value" type="text" id="slot1_divisor" placeholder="e.g. 1000" />
+        </div>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Graph unit</div>
+          <select class="sdpi-item-value select" id="slot1_graphUnit">
+            <option value="">None</option>
+            <option value="B">B</option>
+            <option value="KB">KB</option>
+            <option value="MB">MB</option>
+            <option value="GB">GB</option>
+            <option value="TB">TB</option>
+          </select>
+        </div>
+      </details>
+    </div>
+
+    <!-- Slot 2 -->
+    <div class="slot-section" id="slot-section-2" style="display:none">
+      <div class="sdpi-heading">Slot 3</div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Favorite</div>
+        <select class="sdpi-item-value select" id="slot2_favoriteSelect">
+          <option value="">— from favorite —</option>
+        </select>
+      </div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Sensor</div>
+        <select class="sdpi-item-value select slot-sensor-select" id="slot2_sensorSelect" disabled>
+          <option>Loading...</option>
+        </select>
+      </div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Reading</div>
+        <select class="sdpi-item-value select slot-reading-select" id="slot2_readingSelect" disabled>
+          <option></option>
+        </select>
+      </div>
+      <details>
+        <summary>Advanced</summary>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Divisor</div>
+          <input class="sdpi-item-value" type="text" id="slot2_divisor" placeholder="e.g. 1000" />
+        </div>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Graph unit</div>
+          <select class="sdpi-item-value select" id="slot2_graphUnit">
+            <option value="">None</option>
+            <option value="B">B</option>
+            <option value="KB">KB</option>
+            <option value="MB">MB</option>
+            <option value="GB">GB</option>
+            <option value="TB">TB</option>
+          </select>
+        </div>
+      </details>
+    </div>
+
+    <!-- Slot 3 -->
+    <div class="slot-section" id="slot-section-3" style="display:none">
+      <div class="sdpi-heading">Slot 4</div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Favorite</div>
+        <select class="sdpi-item-value select" id="slot3_favoriteSelect">
+          <option value="">— from favorite —</option>
+        </select>
+      </div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Sensor</div>
+        <select class="sdpi-item-value select slot-sensor-select" id="slot3_sensorSelect" disabled>
+          <option>Loading...</option>
+        </select>
+      </div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Reading</div>
+        <select class="sdpi-item-value select slot-reading-select" id="slot3_readingSelect" disabled>
+          <option></option>
+        </select>
+      </div>
+      <details>
+        <summary>Advanced</summary>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Divisor</div>
+          <input class="sdpi-item-value" type="text" id="slot3_divisor" placeholder="e.g. 1000" />
+        </div>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Graph unit</div>
+          <select class="sdpi-item-value select" id="slot3_graphUnit">
+            <option value="">None</option>
+            <option value="B">B</option>
+            <option value="KB">KB</option>
+            <option value="MB">MB</option>
+            <option value="GB">GB</option>
+            <option value="TB">TB</option>
+          </select>
+        </div>
+      </details>
+    </div>
+
+    <!-- Slot 4 -->
+    <div class="slot-section" id="slot-section-4" style="display:none">
+      <div class="sdpi-heading">Slot 5</div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Favorite</div>
+        <select class="sdpi-item-value select" id="slot4_favoriteSelect">
+          <option value="">— from favorite —</option>
+        </select>
+      </div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Sensor</div>
+        <select class="sdpi-item-value select slot-sensor-select" id="slot4_sensorSelect" disabled>
+          <option>Loading...</option>
+        </select>
+      </div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Reading</div>
+        <select class="sdpi-item-value select slot-reading-select" id="slot4_readingSelect" disabled>
+          <option></option>
+        </select>
+      </div>
+      <details>
+        <summary>Advanced</summary>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Divisor</div>
+          <input class="sdpi-item-value" type="text" id="slot4_divisor" placeholder="e.g. 1000" />
+        </div>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Graph unit</div>
+          <select class="sdpi-item-value select" id="slot4_graphUnit">
+            <option value="">None</option>
+            <option value="B">B</option>
+            <option value="KB">KB</option>
+            <option value="MB">MB</option>
+            <option value="GB">GB</option>
+            <option value="TB">TB</option>
+          </select>
+        </div>
+      </details>
+    </div>
+
+    <!-- Slot 5 -->
+    <div class="slot-section" id="slot-section-5" style="display:none">
+      <div class="sdpi-heading">Slot 6</div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Favorite</div>
+        <select class="sdpi-item-value select" id="slot5_favoriteSelect">
+          <option value="">— from favorite —</option>
+        </select>
+      </div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Sensor</div>
+        <select class="sdpi-item-value select slot-sensor-select" id="slot5_sensorSelect" disabled>
+          <option>Loading...</option>
+        </select>
+      </div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Reading</div>
+        <select class="sdpi-item-value select slot-reading-select" id="slot5_readingSelect" disabled>
+          <option></option>
+        </select>
+      </div>
+      <details>
+        <summary>Advanced</summary>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Divisor</div>
+          <input class="sdpi-item-value" type="text" id="slot5_divisor" placeholder="e.g. 1000" />
+        </div>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Graph unit</div>
+          <select class="sdpi-item-value select" id="slot5_graphUnit">
+            <option value="">None</option>
+            <option value="B">B</option>
+            <option value="KB">KB</option>
+            <option value="MB">MB</option>
+            <option value="GB">GB</option>
+            <option value="TB">TB</option>
+          </select>
+        </div>
+      </details>
+    </div>
+
+    <!-- Slot 6 -->
+    <div class="slot-section" id="slot-section-6" style="display:none">
+      <div class="sdpi-heading">Slot 7</div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Favorite</div>
+        <select class="sdpi-item-value select" id="slot6_favoriteSelect">
+          <option value="">— from favorite —</option>
+        </select>
+      </div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Sensor</div>
+        <select class="sdpi-item-value select slot-sensor-select" id="slot6_sensorSelect" disabled>
+          <option>Loading...</option>
+        </select>
+      </div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Reading</div>
+        <select class="sdpi-item-value select slot-reading-select" id="slot6_readingSelect" disabled>
+          <option></option>
+        </select>
+      </div>
+      <details>
+        <summary>Advanced</summary>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Divisor</div>
+          <input class="sdpi-item-value" type="text" id="slot6_divisor" placeholder="e.g. 1000" />
+        </div>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Graph unit</div>
+          <select class="sdpi-item-value select" id="slot6_graphUnit">
+            <option value="">None</option>
+            <option value="B">B</option>
+            <option value="KB">KB</option>
+            <option value="MB">MB</option>
+            <option value="GB">GB</option>
+            <option value="TB">TB</option>
+          </select>
+        </div>
+      </details>
+    </div>
+
+    <!-- Slot 7 -->
+    <div class="slot-section" id="slot-section-7" style="display:none">
+      <div class="sdpi-heading">Slot 8</div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Favorite</div>
+        <select class="sdpi-item-value select" id="slot7_favoriteSelect">
+          <option value="">— from favorite —</option>
+        </select>
+      </div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Sensor</div>
+        <select class="sdpi-item-value select slot-sensor-select" id="slot7_sensorSelect" disabled>
+          <option>Loading...</option>
+        </select>
+      </div>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Reading</div>
+        <select class="sdpi-item-value select slot-reading-select" id="slot7_readingSelect" disabled>
+          <option></option>
+        </select>
+      </div>
+      <details>
+        <summary>Advanced</summary>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Divisor</div>
+          <input class="sdpi-item-value" type="text" id="slot7_divisor" placeholder="e.g. 1000" />
+        </div>
+        <div class="sdpi-item">
+          <div class="sdpi-item-label">Graph unit</div>
+          <select class="sdpi-item-value select" id="slot7_graphUnit">
+            <option value="">None</option>
+            <option value="B">B</option>
+            <option value="KB">KB</option>
+            <option value="MB">MB</option>
+            <option value="GB">GB</option>
+            <option value="TB">TB</option>
+          </select>
+        </div>
+      </details>
+    </div>
+
+    <details>
+      <summary>Global Thresholds</summary>
+      <div id="derivedGlobalRefsContainer">
+        <!-- Dynamic global threshold checkboxes rendered here -->
+      </div>
+    </details>
+
+  </div><!-- #ui -->
+
+  <script src="pi_utils.js?v=V5-prep.26"></script>
+  <script src="derived_pi.js?v=V5-prep.26"></script>
+</body>
+</html>

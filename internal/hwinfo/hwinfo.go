@@ -1,3 +1,5 @@
+//go:build windows
+
 package hwinfo
 
 /*
@@ -12,8 +14,8 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/shayne/hwinfo-streamdeck/internal/hwinfo/shmem"
-	"github.com/shayne/hwinfo-streamdeck/internal/hwinfo/util"
+	"github.com/moeilijk/hwinfo-streamdeck/internal/hwinfo/shmem"
+	"github.com/moeilijk/hwinfo-streamdeck/internal/hwinfo/util"
 )
 
 // SharedMemory provides access to the HWiNFO shared memory

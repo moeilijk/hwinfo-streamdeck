@@ -1,6 +1,17 @@
 # HWiNFO Stream Deck Plugin
 
-## ⚠⚠ Major refactor landed in pre-release v2.0.0, plugin code open sourced, remote monitoring infrastructure support ⚠⚠ 
+> This project has been adopted and is actively maintained again at [moeilijk/hwinfo-streamdeck](https://github.com/moeilijk/hwinfo-streamdeck). Thanks to Shayne Sweeney for building it and handing it over.
+
+## ⚠⚠ v3.0 — major update ⚠⚠
+
+The plugin core has been replaced with the actively developed engine from the [lhm-streamdeck](https://github.com/moeilijk/lhm-streamdeck) sister project. Existing HWiNFO tiles from v2.0.5 keep working after upgrading. This plugin reads HWiNFO exclusively; for Libre Hardware Monitor use [lhm-streamdeck](https://github.com/moeilijk/lhm-streamdeck) instead. New in 3.0:
+
+- **Composite Dashboard** — 2–4 readings on one key with overlaid graphs
+- **Derived Metric** — formulas (sum, average, max, min, delta, pct) across 2–8 readings
+- **Dial Carousel** — readings on the Stream Deck+ touch strip, rotate to cycle
+- **Settings action** — polling rate, default tile appearance, shared threshold library
+- **Sensor picker** with search, category filtering, and favorites
+- **Dynamic thresholds** with colors, snooze, and hysteresis
 
 ---
 
@@ -76,3 +87,17 @@
 6. Configure the action to display the sensor reading you wish
 
     ![alt text](images/configureaction.gif "Configure Action")
+
+## Sensor source
+
+The plugin reads the local **HWiNFO64 shared memory** — no further configuration needed beyond the HWiNFO setup above. For Libre Hardware Monitor or remote/Linux machines, use the [lhm-streamdeck](https://github.com/moeilijk/lhm-streamdeck) plugin instead.
+
+## Building from source
+
+Requires Go, and for the HWiNFO shared-memory bridge a Windows C toolchain (on Linux/WSL: `mingw-w64`).
+
+```sh
+make plugin   # builds hwinfo.exe and hwinfo-bridge.exe into the .sdPlugin folder
+make verify   # builds all targets, runs Go + Property Inspector tests, validates the manifest
+make release  # packs build/com.exension.hwinfo.streamDeckPlugin
+```

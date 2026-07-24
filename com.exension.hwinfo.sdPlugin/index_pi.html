@@ -9,8 +9,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   <title>Property Inspector Samples PI</title>
   <link rel="stylesheet" href="css/sdpi.css" />
-  <!--link rel="stylesheet" 
-              media="screen and (max-width: 1025px)" 
+  <!--link rel="stylesheet"
+              media="screen and (max-width: 1025px)"
               href="css/local.css" -->
   <link rel="stylesheet" href="css/local.css" />
   <style>
@@ -22,6 +22,11 @@
       max-width: 226px;
       padding-right: 25px;
       font-family: monospace;
+    }
+
+    #sensorSearch,
+    #sensorCategoryFilter {
+      max-width: 226px;
     }
 
     #sensorSelect option {
@@ -45,15 +50,16 @@
     <div class="sdpi-heading">Plugin Error</div>
     <div class="sdpi-item">
       <details open class="message caution">
-        <summary>Unable To Communicate With HWiNFO64</summary>
+        <summary>Unable To Communicate With Sensor Source</summary>
         <p>
-          The plugin is unable to communicate with HWiNFO64
+          The plugin is unable to communicate with HWiNFO
         </p>
-        <p>Make sure it's running and configured properly</p>
+        <p>Make sure HWiNFO64 is running in <strong>Sensors-only</strong> mode with
+          <strong>Shared Memory Support</strong> enabled under Settings.</p>
         <p>
-          For help on how to properly setup HWiNFO64, refer to the
+          Full setup details:
           <a class="info" target="_blank"
-            href="https://github.com/exension/hwinfo-streamdeck/blob/master/README.md#hwinfo-stream-deck-plugin">
+            href="https://github.com/moeilijk/hwinfo-streamdeck#hwinfo-stream-deck-plugin">
             documentation
           </a>
         </p>
@@ -62,27 +68,30 @@
   </div>
 
   <div id="ui" class="sdpi-wrapper localbody hiddenx">
-    <div class="sdpi-heading">Font Sizes</div>
 
-    <div type="range" class="sdpi-item" id="titleFontSize">
-      <div class="sdpi-item-label">Title</div>
-      <div class="sdpi-item-value">
-        <span value="8">8</span>
-        <input type="range" min="8" max="20" step="0.5" value="10.5" list="steplist" />
-        <span value="20">20</span>
-      </div>
+    <div class="sdpi-heading">Source</div>
+
+
+    <div class="sdpi-heading">Sensors</div>
+
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">Find</div>
+      <input class="sdpi-item-value" id="sensorSearch" type="text" placeholder="Search sensors" data-local-only="true" />
     </div>
 
-    <div type="range" class="sdpi-item" id="valueFontSize">
-      <div class="sdpi-item-label">Value</div>
-      <div class="sdpi-item-value">
-        <span value="8">8</span>
-        <input type="range" min="8" max="20" step="0.5" value="10.5" />
-        <span value="20">20</span>
-      </div>
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">Category</div>
+      <select class="sdpi-item-value select" id="sensorCategoryFilter" data-local-only="true">
+        <option value="">All</option>
+        <option value="cpu">CPU</option>
+        <option value="gpu">GPU</option>
+        <option value="memory">Memory</option>
+        <option value="disk">Disk</option>
+        <option value="network">Network</option>
+        <option value="motherboard">Motherboard</option>
+        <option value="other">Other</option>
+      </select>
     </div>
-
-    <div class="sdpi-heading">HWiNFO Sensors</div>
 
     <div class="sdpi-item">
       <div class="sdpi-item-label">Sensor</div>
@@ -98,72 +107,373 @@
       </select>
     </div>
 
-    <div class="sdpi-heading">Value Params</div>
+    <details>
+      <summary>Favorites</summary>
 
-    <div type="sdpi-item" class="sdpi-item" id="paramsgroup">
-      <div class="sdpi-item-label">Min/Max</div>
-
-      <div class="sdpi-item" id="minmax" style="margin-left: -4px">
-        <input class="sdpi-item-value" style="width:4em" placeholder="Min" inputmode="numeric" pattern="[0-9]*"
-          type="number" id="min" name="min" />
-        <input class="sdpi-item-value" style="margin-left: -7px; width:4em" placeholder=" Max" inputmode="numeric"
-          pattern="[0-9]*" type="number" id="max" name="max" />
-      </div>
-    </div>
-
-    <details id="advanced_details">
-      <summary>Advanced</summary>
-      <div class="sdpi-item" id="format">
-        <div class="sdpi-item-label">Format</div>
-        <input class="sdpi-item-value" placeholder="%.0f (no decimals)" type="text" name="format" value="" />
-      </div>
       <div class="sdpi-item">
-        <details open class="message question noInnerMargins">
-          <summary>Help</summary>
-          <p>Format can be used to modify format of the value.</p>
-          <p>
-            For more information on how to use this field,
-            <a target="_BLANK" href="#"
-              onclick="openUrl('https://gobyexample.com/string-formatting'); return false;">click here</a>.
-          </p>
-        </details>
+        <div class="sdpi-item-label">Favorite</div>
+        <div class="sdpi-item-value favorite-actions">
+          <button id="favoriteToggleBtn" type="button" data-local-only="true" disabled>Save Current</button>
+        </div>
       </div>
 
-      <div class="sdpi-item" id="divisor">
-        <div class="sdpi-item-label">Divisor</div>
-        <input class="sdpi-item-value" placeholder="e.g. 125 (for bytes to megabits)" inputmode="numeric"
-          pattern="[0-9]*" min="1" type="number" name="divisor" />
-      </div>
       <div class="sdpi-item">
-        <details open class="message question noInnerMargins">
+        <div class="sdpi-item-label">Favorites</div>
+        <select class="sdpi-item-value select" id="favoriteSelect" data-local-only="true" disabled>
+          <option>No favorites saved</option>
+        </select>
+      </div>
+
+      <div class="sdpi-item favorite-action-row">
+        <div class="sdpi-item-label favorite-empty-label"></div>
+        <div class="sdpi-item-value favorite-actions">
+          <button id="applyFavoriteBtn" type="button" data-local-only="true" disabled>Use</button>
+          <button id="removeFavoriteBtn" type="button" data-local-only="true" disabled>Delete</button>
+        </div>
+      </div>
+    </details>
+
+    <details>
+      <summary>Display</summary>
+
+      <div type="range" class="sdpi-item" id="titleFontSize">
+        <div class="sdpi-item-label">Title size</div>
+        <div class="sdpi-item-value">
+          <span value="8">8</span>
+          <div class="range-wrap">
+            <span class="range-val">10.5</span>
+            <input type="range" min="8" max="20" step="0.5" value="10.5" list="steplist" />
+          </div>
+          <span value="20">20</span>
+        </div>
+      </div>
+
+      <div type="range" class="sdpi-item" id="valueFontSize">
+        <div class="sdpi-item-label">Value size</div>
+        <div class="sdpi-item-value">
+          <span value="8">8</span>
+          <div class="range-wrap">
+            <span class="range-val">10.5</span>
+            <input type="range" min="8" max="20" step="0.5" value="10.5" />
+          </div>
+          <span value="20">20</span>
+        </div>
+      </div>
+
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Display</div>
+        <select class="sdpi-item-value select" id="graphMode">
+          <option value="both">Both</option>
+          <option value="graph">Graph only</option>
+          <option value="text">Text only</option>
+        </select>
+      </div>
+
+      <div type="range" class="sdpi-item" id="graphHeightPct">
+        <div class="sdpi-item-label">Graph height</div>
+        <div class="sdpi-item-value">
+          <span value="10">10</span>
+          <div class="range-wrap">
+            <span class="range-val">100</span>
+            <input type="range" min="10" max="100" step="5" value="100" />
+          </div>
+          <span value="100">100%</span>
+        </div>
+      </div>
+
+      <div type="range" class="sdpi-item" id="graphLineThickness">
+        <div class="sdpi-item-label">Line thickness</div>
+        <div class="sdpi-item-value">
+          <span value="1">1</span>
+          <div class="range-wrap">
+            <span class="range-val">1</span>
+            <input type="range" min="1" max="4" step="1" value="1" />
+          </div>
+          <span value="4">4</span>
+        </div>
+      </div>
+
+      <div class="sdpi-item show-label-row" id="textStrokeRow">
+        <div class="sdpi-item-label">Text stroke</div>
+        <div class="show-label-cell">
+          <input type="checkbox" class="show-label-checkbox" id="textStroke" />
+        </div>
+        <div class="sdpi-item-label empty"></div>
+        <div class="show-label-cell show-label-cell-spacer" aria-hidden="true"></div>
+      </div>
+
+      <div type="color" class="sdpi-item" id="textStrokeColorRow">
+        <div class="sdpi-item-label">Stroke color</div>
+        <input type="color" class="sdpi-item-value" id="textStrokeColor" value="#000000" />
+      </div>
+
+      <div type="color" class="sdpi-item" id="colorselection">
+        <div class="sdpi-item-label">Background</div>
+        <input type="color" class="sdpi-item-value" id="background" value="#000000" />
+        <div class="sdpi-item-label">Value Text</div>
+        <input type="color" class="sdpi-item-value" id="valuetext" value="#ffffff" />
+      </div>
+
+      <div type="color" class="sdpi-item" id="colorselection">
+        <div class="sdpi-item-label">Foreground</div>
+        <input type="color" class="sdpi-item-value" id="foreground" value="#005128" />
+        <div class="sdpi-item-label">Highlight</div>
+        <input type="color" class="sdpi-item-value" id="highlight" value="#009e00" />
+      </div>
+    </details>
+
+    <details>
+      <summary>Timing &amp; Smoothing</summary>
+
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Update every</div>
+        <select class="sdpi-item-value select" id="updateIntervalOverrideMs">
+          <option value="0">Use global</option>
+          <option value="1000">1s</option>
+          <option value="2000">2s</option>
+          <option value="5000">5s</option>
+          <option value="10000">10s</option>
+          <option value="30000">30s</option>
+          <option value="60000">60s</option>
+        </select>
+      </div>
+
+      <div type="range" class="sdpi-item" id="smoothingAlpha">
+        <div class="sdpi-item-label">Smoothing</div>
+        <div class="sdpi-item-value">
+          <span value="0.1">0.1</span>
+          <div class="range-wrap">
+            <span class="range-val">1</span>
+            <input type="range" min="0.1" max="1" step="0.1" value="1" />
+          </div>
+          <span value="1">1</span>
+        </div>
+      </div>
+    </details>
+
+    <details>
+      <summary>Scale</summary>
+
+      <div type="sdpi-item" class="sdpi-item" id="paramsgroup">
+        <div class="sdpi-item-label">Min/Max</div>
+
+        <div class="sdpi-item" id="minmax" style="margin-left: -4px">
+          <input class="sdpi-item-value" style="width:4em" placeholder="Min" inputmode="numeric" pattern="[0-9]*"
+            type="number" id="min" name="min" />
+          <input class="sdpi-item-value" style="margin-left: -7px; width:4em" placeholder=" Max" inputmode="numeric"
+            pattern="[0-9]*" type="number" id="max" name="max" />
+        </div>
+      </div>
+
+      <div class="sdpi-item" id="graphUnitContainer" style="display: none;">
+        <div class="sdpi-item-label">Graph Unit</div>
+        <select class="sdpi-item-value select" id="graphUnit">
+          <option value="" selected>None</option>
+          <option value="B">B (Bytes)</option>
+          <option value="KB">KB (Kilobytes)</option>
+          <option value="MB">MB (Megabytes)</option>
+          <option value="GB">GB (Gigabytes)</option>
+          <option value="TB">TB (Terabytes)</option>
+        </select>
+      </div>
+
+      <details id="advanced_details">
+        <summary>Advanced</summary>
+        <div class="sdpi-item" id="format">
+          <div class="sdpi-item-label">Format</div>
+          <input class="sdpi-item-value" placeholder="%.0f (no decimals)" type="text" name="format" value="" />
+        </div>
+        <div class="sdpi-item">
+          <details open class="message question noInnerMargins">
+            <summary>Help</summary>
+            <p>Format can be used to modify format of the value.</p>
+            <p>
+              For more information on how to use this field,
+              <a target="_BLANK" href="#"
+                onclick="openUrl('https://gobyexample.com/string-formatting'); return false;">click here</a>.
+            </p>
+          </details>
+        </div>
+
+        <div class="sdpi-item" id="divisor">
+          <div class="sdpi-item-label">Divisor</div>
+          <input class="sdpi-item-value" placeholder="e.g. 125 (for bytes to megabits)" inputmode="numeric"
+            pattern="[0-9]*" min="1" type="number" name="divisor" />
+        </div>
+        <div class="sdpi-item">
+          <details open class="message question noInnerMargins">
+            <summary>Help</summary>
+            <p>Divisor can be used to convert the value.</p>
+            <p>
+              For example, converting bytes to megabits, set the divisor to:
+              "125"
+            </p>
+          </details>
+        </div>
+      </details>
+    </details>
+
+    <details>
+      <summary>Alert Snooze</summary>
+
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">On Key Press</div>
+        <div class="sdpi-item-value snooze-options" data-local-only="true">
+          <button type="button" class="snooze-duration snooze-preset" id="snooze5m" data-value="300000">5m</button>
+          <button type="button" class="snooze-duration snooze-preset" id="snooze15m" data-value="900000">15m</button>
+          <button type="button" class="snooze-duration snooze-preset" id="snooze1h" data-value="3600000">1h</button>
+          <button type="button" class="snooze-duration snooze-preset" id="snoozeUntilResumed" data-value="0">Until resumed</button>
+        </div>
+      </div>
+
+      <div class="sdpi-item">
+        <details class="noInnerMargins">
           <summary>Help</summary>
-          <p>Divisor can be used to convert the value.</p>
-          <p>
-            For example, converting bytes to megabits, set the divisor to:
-            "125"
-          </p>
+          <p>Select one or more presets. Each key press steps through the selected presets in order. After the last preset, the next press resumes alerts.</p>
         </details>
       </div>
     </details>
 
-    <div class="sdpi-heading">Graph Colors</div>
+    <details>
+      <summary>Thresholds</summary>
 
-    <div type="color" class="sdpi-item" id="colorselection">
-      <div class="sdpi-item-label">Background</div>
-      <input type="color" class="sdpi-item-value" id="background" value="#000000" />
-      <div class="sdpi-item-label">Value Text</div>
-      <input type="color" class="sdpi-item-value" id="valuetext" value="#ffffff" />
-    </div>
+      <div id="thresholdsContainer">
+        <!-- Dynamic threshold items will be rendered here -->
+      </div>
 
-    <div type="color" class="sdpi-item" id="colorselection">
-      <div class="sdpi-item-label">Foreground</div>
-      <input type="color" class="sdpi-item-value" id="foreground" value="#005128" />
-      <div class="sdpi-item-label">Highlight</div>
-      <input type="color" class="sdpi-item-value" id="highlight" value="#009e00" />
-    </div>
+      <div class="sdpi-item" id="addThresholdContainer">
+        <div class="sdpi-item-label">Add New</div>
+        <div class="sdpi-item-value" style="display: flex; align-items: center; gap: 4px;">
+          <input type="text" id="newThresholdName" placeholder="Name" style="width: 100px;" />
+          <button id="addThresholdBtn" class="sdpi-item-value" style="width: 60px;">Add</button>
+        </div>
+      </div>
+    </details>
+
+    <details>
+      <summary>Global Thresholds</summary>
+
+      <div id="globalRefsContainer">
+        <!-- Dynamic global threshold checkboxes rendered here -->
+      </div>
+    </details>
+
+    <!-- Template for threshold items (hidden, cloned by JS) -->
+    <template id="thresholdTemplate">
+      <div class="threshold-item" data-threshold-id="">
+        <div class="sdpi-item" style="margin-top: 8px;">
+          <div class="sdpi-item-label threshold-header-label">
+            <input type="text" class="threshold-name" placeholder="Name" style="width: 70px;" />
+          </div>
+          <div class="sdpi-item-value threshold-header-value" style="display: flex; align-items: center; gap: 4px;">
+            <button class="threshold-toggle" style="width: 26px; padding: 0;">on</button>
+            <span class="threshold-arrows">
+              <button class="threshold-move-up" style="width: 18px; padding: 0;" title="Move up">&uarr;</button>
+              <button class="threshold-move-down" style="width: 18px; padding: 0;" title="Move down">&darr;</button>
+            </span>
+            <button class="threshold-remove" style="width: 18px; padding: 0; background: #a33; color: white;" title="Remove">×</button>
+          </div>
+        </div>
+
+        <div class="threshold-settings" style="display: none;">
+          <div class="sdpi-item">
+            <div class="sdpi-item-label">Text</div>
+            <input type="text" class="sdpi-item-value threshold-text" placeholder="e.g. HOT or Hot {value}" />
+          </div>
+          <div class="sdpi-item">
+            <div class="sdpi-item-label">Condition</div>
+            <div class="sdpi-item-value" style="display: flex; align-items: center; gap: 4px;">
+              <select class="threshold-operator" style="width: 55px;">
+                <option value=">">&gt;</option>
+                <option value="<">&lt;</option>
+                <option value=">=" selected>&gt;=</option>
+                <option value="<=">&lt;=</option>
+                <option value="==">==</option>
+              </select>
+              <input type="number" class="threshold-value" step="any" style="width: 60px;" placeholder="Value" />
+            </div>
+          </div>
+
+          <div class="sdpi-item threshold-advanced-toggle-row">
+            <div class="sdpi-item-label threshold-empty-label"></div>
+            <div class="sdpi-item-value threshold-advanced-toggle-cell">
+              <button class="threshold-advanced-toggle" type="button">Advanced</button>
+            </div>
+          </div>
+
+          <div class="threshold-advanced-panel" style="display: none;">
+            <div class="sdpi-item threshold-compact-row">
+              <div class="sdpi-item-label">
+                Hyst
+                <span
+                  class="field-help"
+                  title="Hysteresis prevents alert flapping around the threshold. Example: with &gt;= 70 and Hyst 5, the alert stays active until the value drops below 65. Default: 1. Use 0 or higher."
+                >(i)</span>
+              </div>
+              <input type="number" class="sdpi-item-value threshold-hysteresis threshold-input-compact" step="any" placeholder="1" />
+            </div>
+
+            <div class="sdpi-item threshold-compact-row">
+              <div class="sdpi-item-label">
+                Dwell ms
+                <span
+                  class="field-help"
+                  title="The condition must stay true for this many milliseconds before the alert activates. Use 0 for immediate activation. Default: 1000. Typical values: 500, 1000, 5000."
+                >(i)</span>
+              </div>
+              <input type="number" class="sdpi-item-value threshold-dwell threshold-input-compact" step="100" min="0" placeholder="1000" />
+            </div>
+
+            <div class="sdpi-item threshold-compact-row">
+              <div class="sdpi-item-label">
+                Cooldown ms
+                <span
+                  class="field-help"
+                  title="After the alert clears, it cannot trigger again until this many milliseconds have passed. Use 0 to disable cooldown. Default: 5000. Typical values: 1000, 5000, 10000."
+                >(i)</span>
+              </div>
+              <input type="number" class="sdpi-item-value threshold-cooldown threshold-input-compact" step="100" min="0" placeholder="5000" />
+            </div>
+
+            <div class="sdpi-item threshold-sticky-row">
+              <div class="sdpi-item-label">
+                Sticky
+                <span
+                  class="field-help"
+                  title="Sticky latches the alert and displayed value on the tile until you press the tile to clear it. After clearing, the threshold stays suppressed until the value has actually returned to normal. Toggle on or off."
+                >(i)</span>
+              </div>
+              <div class="sdpi-item-value threshold-sticky-cell">
+                <button class="threshold-sticky-toggle" type="button">off</button>
+              </div>
+            </div>
+          </div>
+
+          <div type="color" class="sdpi-item">
+            <div class="sdpi-item-label">Background</div>
+            <input type="color" class="sdpi-item-value threshold-bg" value="#333300" />
+            <div class="sdpi-item-label">Value Text</div>
+            <input type="color" class="sdpi-item-value threshold-vt" value="#ffff00" />
+          </div>
+
+          <div type="color" class="sdpi-item">
+            <div class="sdpi-item-label">Foreground</div>
+            <input type="color" class="sdpi-item-value threshold-fg" value="#999900" />
+            <div class="sdpi-item-label">Highlight</div>
+            <input type="color" class="sdpi-item-value threshold-hl" value="#ffff00" />
+          </div>
+
+          <div type="color" class="sdpi-item">
+            <div class="sdpi-item-label">Alert Text</div>
+            <input type="color" class="sdpi-item-value threshold-tc" value="#ffffff" />
+          </div>
+        </div>
+      </div>
+    </template>
   </div>
   <!-- <script src="echomd.js"></script> -->
-  <script src="index_pi.js"></script>
+  <script src="pi_utils.js?v=V5-prep.26"></script>
+  <script src="index_pi.js?v=V5-prep.26"></script>
 </body>
 
 </html>

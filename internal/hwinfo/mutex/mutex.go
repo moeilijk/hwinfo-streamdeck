@@ -1,3 +1,5 @@
+//go:build windows
+
 package mutex
 
 /*
@@ -10,7 +12,7 @@ import (
 	"sync"
 	"unsafe"
 
-	"github.com/shayne/hwinfo-streamdeck/internal/hwinfo/util"
+	"github.com/moeilijk/hwinfo-streamdeck/internal/hwinfo/util"
 )
 
 var ghnd C.HANDLE

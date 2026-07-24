@@ -16,3 +16,222 @@ body,
 .hidden {
   display: block;
 }
+
+.threshold-header-label:after {
+  content: "";
+}
+
+.favorite-empty-label:after {
+  content: "";
+}
+
+.threshold-empty-label:after {
+  content: "";
+}
+
+.favorite-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: flex-start;
+}
+
+.favorite-action-row {
+  margin-top: -4px;
+}
+
+.favorite-actions button {
+  min-width: 72px;
+}
+
+.threshold-arrows {
+  display: flex;
+  gap: 0;
+  margin-right: -2px;
+}
+
+.threshold-arrows .threshold-move-up,
+.threshold-arrows .threshold-move-down {
+  margin: 0;
+}
+
+.threshold-advanced-toggle-row {
+  margin-top: 2px;
+}
+
+.threshold-advanced-toggle-cell {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.threshold-advanced-toggle {
+  min-width: 88px;
+  padding: 0 8px;
+  text-align: left;
+}
+
+.threshold-advanced-panel {
+  margin-top: 4px;
+}
+
+.threshold-hysteresis,
+.threshold-dwell,
+.threshold-cooldown {
+  box-sizing: border-box;
+  margin: 0 !important;
+  padding-left: 4px !important;
+  padding-right: 4px !important;
+  flex: 0 0 auto !important;
+}
+
+.threshold-compact-row > .sdpi-item-label,
+.threshold-sticky-row > .sdpi-item-label {
+  line-height: 1.15;
+  width: 132px;
+  white-space: nowrap;
+}
+
+.threshold-input-compact {
+  width: 58px !important;
+  min-width: 58px !important;
+  max-width: 58px !important;
+  margin-left: 0 !important;
+  margin-right: auto !important;
+}
+
+.field-help {
+  color: #9fb7d9;
+  cursor: help;
+  font-size: 11px;
+  margin-left: 2px;
+  text-decoration: underline dotted;
+}
+
+.threshold-sticky-row {
+  align-items: center;
+}
+
+.threshold-sticky-cell {
+  flex: none;
+  width: 58px;
+  min-width: 58px;
+  margin-left: 5px;
+  margin-right: 14px;
+  min-height: 26px;
+  display: flex;
+  justify-content: flex-start !important;
+  align-items: center;
+}
+
+.threshold-sticky-toggle {
+  width: 38px;
+  min-width: 38px;
+  padding: 0;
+  margin: 0;
+  color: #fff;
+}
+
+.snooze-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-start;
+}
+
+.snooze-preset {
+  min-width: 44px;
+  margin: 0 !important;
+  padding: 0 8px;
+}
+
+.snooze-preset.is-selected {
+  background: #4a4;
+  border-color: #4a4;
+  color: #fff;
+}
+
+/* Use a native checkbox for show-label-row items to avoid hidden/custom toggle issues. */
+.show-label-checkbox,
+#showLabel {
+  display: inline-block !important;
+  appearance: checkbox !important;
+  -webkit-appearance: checkbox !important;
+  width: 18px !important;
+  height: 18px !important;
+  margin: 0;
+}
+
+.show-label-row {
+  align-items: center;
+}
+
+.show-label-row .show-label-cell {
+  flex: none;
+  width: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  margin-left: 4px;
+  margin-right: 14px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.show-label-row .show-label-cell-spacer {
+  visibility: hidden;
+}
+
+.show-label-row .show-label-checkbox {
+  min-height: 18px;
+}
+
+/* Override sdpi.css :disabled red color — use grey instead */
+:disabled,
+select.disabled,
+select option:disabled {
+  color: #888 !important;
+  font-style: normal !important;
+}
+
+.range-wrap {
+  flex: 1;
+  position: relative;
+  display: flex;
+}
+
+.range-wrap input[type="range"] {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  max-width: none !important;
+  transform: translateY(2px);
+}
+
+.sdpi-item:has(.range-wrap),
+.sdpi-item-value:has(.range-wrap),
+details:has(.range-wrap) {
+  overflow: visible;
+}
+
+details .sdpi-item:has(.range-wrap) {
+  margin-top: 8px;
+}
+
+.range-val {
+  position: absolute;
+  top: -0.4em;
+  left: 0;
+  transform: translateX(-50%);
+  font-size: 9pt;
+  font-weight: normal;
+  line-height: 1;
+  color: #ccc;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  white-space: nowrap;
+  margin-top: 0 !important;
+}
+
+/* Restore spin buttons for port number input */

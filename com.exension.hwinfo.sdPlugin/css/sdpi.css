@@ -283,7 +283,7 @@ select {
   -moz-appearance: none;
   -o-appearance: none;
   appearance: none;
-  background: url(../assets/caret.svg) no-repeat 97% center;
+  background: url(caret.svg) no-repeat 97% center;
 }
 
 label.sdpi-file-label,
@@ -965,7 +965,7 @@ input[type="radio"]+label span {
 input[type="radio"]:checked+label span,
 input[type="checkbox"]:checked+label span {
   background-color: #77f;
-  background-image: url(../assets/check.svg);
+  background-image: url(check.svg);
   background-repeat: no-repeat;
   background-position: center center;
   border: 1px solid rgb(0, 0, 0, .4);
@@ -979,7 +979,7 @@ input[type="checkbox"]:active+label span {
 }
 
 input[type="radio"]:checked+label span {
-  background-image: url(../assets/rcheck.svg);
+  background-image: url(rcheck.svg);
 }
 
 input[type="range"] {
@@ -1195,7 +1195,7 @@ width: 219px; /*98%;*/
 }
 
 ::-webkit-calendar-picker-indicator {
-  background: url(../assets/elg_calendar_inv.svg) no-repeat center;
+  background: url(elg_calendar_inv.svg) no-repeat center;
   font-size: 17px;
 }
 
