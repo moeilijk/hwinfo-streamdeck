@@ -1,42 +1,32 @@
 # HWiNFO Stream Deck Plugin
 
-> This project has been adopted and is actively maintained again at [moeilijk/hwinfo-streamdeck](https://github.com/moeilijk/hwinfo-streamdeck). Thanks to Shayne Sweeney for building it and handing it over.
+[![Build & Test](https://github.com/moeilijk/hwinfo-streamdeck/actions/workflows/build.yml/badge.svg)](https://github.com/moeilijk/hwinfo-streamdeck/actions/workflows/build.yml)
 
-## ⚠⚠ v3.0 — major update ⚠⚠
-
-The plugin core has been replaced with the actively developed engine from the [lhm-streamdeck](https://github.com/moeilijk/lhm-streamdeck) sister project. Existing HWiNFO tiles from v2.0.5 keep working after upgrading — the reading action and its settings are fully backwards compatible.
-
-This plugin reads **HWiNFO exclusively** (Windows). For Libre Hardware Monitor, remote machines, or Linux, use the [lhm-streamdeck](https://github.com/moeilijk/lhm-streamdeck) plugin instead.
-
-New in 3.0:
-
-- **Sensor Reading** (upgraded) — graph and/or text, custom colors, fonts, formats, unit normalization, EMA smoothing, and per-tile update intervals
-- **Composite Dashboard** — 2–4 readings on one key with overlaid graphs
-- **Derived Metric** — formulas (sum, average, max, min, delta, pct) across 2–8 readings, with savable presets
-- **Dial Carousel** — readings on the Stream Deck+ touch strip: rotate to cycle pages, multiple overview styles, page indicators
-- **Settings action** — polling rate, default tile appearance, and a shared global threshold library
-- **Sensor picker** with search, category filtering, and favorites shared across all tiles
-- **Dynamic thresholds** — colors, alert text, hysteresis, dwell, cooldown, snooze, and sticky alarms; define globally by sensor type or per tile
-
----
-
->## Thank you & Looking for Maintainers
->
->Thank you everyone who has used and enjoyed this plugin. It started as a passion project and I continue to use it day to day. I am happy to finally release the full source on GitHub. When I first built it, it was closed under agreement with the HWiNFO64 project. They have since opened up the shared memory interface and now the plugin is freely open.
->
->I haven't had the time to dedicate to this project in some time and appreciate everyone for hanging in there. I hope to work with some of you who are eager to take the project over. I am happy and ready to hand over the reigns. If there are development questions I'm happy to share my thoughts on the code and structure that exists.
->
->*-Shayne*
-
----
+Show live [HWiNFO64](https://www.hwinfo.com) sensor readings (temperatures, loads, clocks, fan speeds, and more) on your Elgato Stream Deck, as graphs, text, or both.
 
 ![alt text](images/demo.gif "HWiNFO64 Stream Deck Plugin Demo")
 
-> NOTICE: HWiNFO64 must be run in Sensors-only mode for the plugin to work. 
+**Requirements:** Windows 10 or later, [HWiNFO64](https://www.hwinfo.com), Stream Deck software 6.9 or later. The Dial Carousel action requires a Stream Deck+.
+
+This plugin reads HWiNFO exclusively. For Libre Hardware Monitor, remote machines, or Linux, use the [lhm-streamdeck](https://github.com/moeilijk/lhm-streamdeck) sister plugin instead.
+
+## v3.0
+
+The plugin core has been replaced with the actively developed engine from the [lhm-streamdeck](https://github.com/moeilijk/lhm-streamdeck) sister project. Existing tiles from v2.0.5 keep working after upgrading; the reading action and its settings are fully backwards compatible.
+
+## Actions
+
+- **Sensor Reading** — one reading per key: graph and/or text, custom colors, fonts, number formats, unit normalization, EMA smoothing, and per-tile update intervals
+- **Composite Dashboard** — 2–4 readings on one key with overlaid graphs
+- **Derived Metric** — formulas (sum, average, max, min, delta, pct) across 2–8 readings, with savable presets
+- **Dial Carousel** — readings on the Stream Deck+ touch strip: rotate to cycle pages, multiple overview styles, page indicators
+- **Settings** — polling rate, default tile appearance, and a shared global threshold library
+
+All sensor pickers support search, category filtering, and favorites shared across tiles. Thresholds (colors, alert text, hysteresis, dwell, cooldown, snooze, sticky alarms) can be defined per tile or globally by sensor type.
 
 ## Enabling Support in HWiNFO64
 
-> NOTICE: It has been reported that running the "portable" version of HWiNFO64 doesn't work with this plugin. The recommendation is to run the version with the installer until I can figure out the issue.
+> If the "portable" version of HWiNFO64 gives trouble with this plugin, use the installer version.
 
 1. Download and install HWiNFO64, if you haven't already
 
@@ -56,16 +46,9 @@ New in 3.0:
 
 5. (Optional) Recommended launch settings
 
-    ![alt text](images/recommendedsettings.png "Quit HWiNFO64")
+    ![alt text](images/recommendedsettings.png "Recommended settings")
 
 6. Click "OK" then, "Run"
-
-    > If the plugin doesn't work immediately, you may have to quit and reopen HWiNFO64.
-    >
-    > From the system tray:
-    >
-    > ![alt text](images/contextquit.png "Quit HWiNFO64")
-
 
 ## Install and Setup the Plugin
 
@@ -79,13 +62,9 @@ New in 3.0:
 
 3. Choose "Install" when prompted by Stream Deck
 
-    ![alt text](images/streamdeckinstall.png "Stream Deck Plugin Installation")
+4. Locate the actions under the "HWiNFO" category in the action list
 
-4. Locate "HWiNFO" under "Custom" in the action list
-
-    ![alt text](images/streamdeckactionlist.png "Stream Deck Action List")
-
-5. Drag one of the "HWiNFO" actions from the list to a tile in the canvas area
+5. Drag one of the actions from the list to a tile in the canvas area
 
     ![alt text](images/dragaction.gif "Drag Action")
 
@@ -95,9 +74,12 @@ New in 3.0:
 
     > Screenshots show the v2 configuration screen; v3 adds a searchable sensor picker with categories and favorites, appearance controls, and thresholds in the same panel.
 
-## Sensor source
+## Troubleshooting
 
-The plugin reads the local **HWiNFO64 shared memory** — no further configuration needed beyond the HWiNFO setup above. For Libre Hardware Monitor or remote/Linux machines, use the [lhm-streamdeck](https://github.com/moeilijk/lhm-streamdeck) plugin instead.
+- **Tiles show "HWiNFO Unavailable" or "Please Launch HWiNFO64"** — HWiNFO is not running, is not in Sensors-only mode, or Shared Memory Support is off. Walk through the HWiNFO setup above; if the plugin doesn't recover immediately, quit and reopen HWiNFO64.
+- **Tiles stop updating after ~12 hours** — the free version of HWiNFO disables Shared Memory Support 12 hours after enabling it. Restart HWiNFO (or re-enable the setting) to continue; a HWiNFO Pro license removes the limit. This is HWiNFO policy, not something the plugin can work around.
+- **A tile shows no value after upgrading or after hardware changes** — the configured sensor may no longer exist under the same id. Open the tile's configuration and select the sensor and reading again.
+- **Reporting a bug** — the plugin writes a log to `%APPDATA%\Elgato\StreamDeck\Plugins\com.exension.hwinfo.sdPlugin\hwinfo.log`; the last lines are usually enough to pinpoint the problem. Please attach them to your issue.
 
 ## Building from source
 
@@ -116,3 +98,7 @@ The Stream Deck plugin (`hwinfo.exe`) talks to a sensor bridge (`hwinfo-bridge.e
 For development without Windows/HWiNFO there is `cmd/mock-bridge`: the same gRPC interface with controllable
 mock sensors (HTTP control API on `:9999`), used by the integration suites in `tests/integration/`
 (`scripts/run-integration-tests.sh`, runs against a [DeckBridge](https://github.com/moeilijk/DeckBridge) emulator on Linux/WSL).
+
+## History and credits
+
+This plugin was created by [Shayne Sweeney](https://github.com/shayne) ([exension](https://github.com/exension)), who built it as a closed-source passion project, open-sourced it once HWiNFO opened up the shared memory interface, and maintained it through v2.0.5. In 2026 he handed the project over to [moeilijk](https://github.com/moeilijk), who maintains it today. Thanks, Shayne.
