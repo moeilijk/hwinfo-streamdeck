@@ -4,14 +4,19 @@
 
 ## ⚠⚠ v3.0 — major update ⚠⚠
 
-The plugin core has been replaced with the actively developed engine from the [lhm-streamdeck](https://github.com/moeilijk/lhm-streamdeck) sister project. Existing HWiNFO tiles from v2.0.5 keep working after upgrading. This plugin reads HWiNFO exclusively; for Libre Hardware Monitor use [lhm-streamdeck](https://github.com/moeilijk/lhm-streamdeck) instead. New in 3.0:
+The plugin core has been replaced with the actively developed engine from the [lhm-streamdeck](https://github.com/moeilijk/lhm-streamdeck) sister project. Existing HWiNFO tiles from v2.0.5 keep working after upgrading — the reading action and its settings are fully backwards compatible.
 
+This plugin reads **HWiNFO exclusively** (Windows). For Libre Hardware Monitor, remote machines, or Linux, use the [lhm-streamdeck](https://github.com/moeilijk/lhm-streamdeck) plugin instead.
+
+New in 3.0:
+
+- **Sensor Reading** (upgraded) — graph and/or text, custom colors, fonts, formats, unit normalization, EMA smoothing, and per-tile update intervals
 - **Composite Dashboard** — 2–4 readings on one key with overlaid graphs
-- **Derived Metric** — formulas (sum, average, max, min, delta, pct) across 2–8 readings
-- **Dial Carousel** — readings on the Stream Deck+ touch strip, rotate to cycle
-- **Settings action** — polling rate, default tile appearance, shared threshold library
-- **Sensor picker** with search, category filtering, and favorites
-- **Dynamic thresholds** with colors, snooze, and hysteresis
+- **Derived Metric** — formulas (sum, average, max, min, delta, pct) across 2–8 readings, with savable presets
+- **Dial Carousel** — readings on the Stream Deck+ touch strip: rotate to cycle pages, multiple overview styles, page indicators
+- **Settings action** — polling rate, default tile appearance, and a shared global threshold library
+- **Sensor picker** with search, category filtering, and favorites shared across all tiles
+- **Dynamic thresholds** — colors, alert text, hysteresis, dwell, cooldown, snooze, and sticky alarms; define globally by sensor type or per tile
 
 ---
 
@@ -72,7 +77,7 @@ The plugin core has been replaced with the actively developed engine from the [l
 
 2. Double-click to install the plugin
 
-3. Choose "Install" went prompted by Stream Deck
+3. Choose "Install" when prompted by Stream Deck
 
     ![alt text](images/streamdeckinstall.png "Stream Deck Plugin Installation")
 
@@ -80,13 +85,15 @@ The plugin core has been replaced with the actively developed engine from the [l
 
     ![alt text](images/streamdeckactionlist.png "Stream Deck Action List")
 
-5. Drag the "HWiNFO" action from the list to a tile in the canvas area
+5. Drag one of the "HWiNFO" actions from the list to a tile in the canvas area
 
     ![alt text](images/dragaction.gif "Drag Action")
 
 6. Configure the action to display the sensor reading you wish
 
     ![alt text](images/configureaction.gif "Configure Action")
+
+    > Screenshots show the v2 configuration screen; v3 adds a searchable sensor picker with categories and favorites, appearance controls, and thresholds in the same panel.
 
 ## Sensor source
 
@@ -101,3 +108,11 @@ make plugin   # builds hwinfo.exe and hwinfo-bridge.exe into the .sdPlugin folde
 make verify   # builds all targets, runs Go + Property Inspector tests, validates the manifest
 make release  # packs build/com.exension.hwinfo.streamDeckPlugin
 ```
+
+### Architecture
+
+The Stream Deck plugin (`hwinfo.exe`) talks to a sensor bridge (`hwinfo-bridge.exe`) over gRPC
+([hashicorp/go-plugin](https://github.com/hashicorp/go-plugin)); the bridge reads the HWiNFO shared memory.
+For development without Windows/HWiNFO there is `cmd/mock-bridge`: the same gRPC interface with controllable
+mock sensors (HTTP control API on `:9999`), used by the integration suites in `tests/integration/`
+(`scripts/run-integration-tests.sh`, runs against a [DeckBridge](https://github.com/moeilijk/DeckBridge) emulator on Linux/WSL).
