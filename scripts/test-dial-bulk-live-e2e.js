@@ -54,7 +54,7 @@ async function getState() {
   if (!res.ok) throw new Error("state " + res.status);
   return res.json();
 }
-const dialSlots = (s) => (s.slots || []).filter((x) => x && /dial/i.test(String(x.actionId || x.action || "")));
+const dialSlots = (s) => (s.slots || []).filter((x) => x && String(x.actionId || x.action || "") === "com.exension.hwinfo.dial");
 const slotByContext = (s, ctx) => dialSlots(s).find((x) => x.context === ctx);
 
 // Pick the reading whose (label,type,unit) appears on the MOST sensors — the

@@ -37,7 +37,7 @@ const dialPi = fs.readFileSync(path.join(repoRoot, "com.exension.hwinfo.sdPlugin
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const getState = async () => (await fetch(`${BASE}/api/state`)).json();
-const dialSlots = (s) => (s.slots || []).filter((x) => x && /dial/i.test(String(x.actionId || x.action || "")));
+const dialSlots = (s) => (s.slots || []).filter((x) => x && String(x.actionId || x.action || "") === "com.exension.hwinfo.dial");
 const slotByContext = async (ctx) => (await getState()).slots.find((s) => s.context === ctx);
 
 async function rotate(deviceId, dialIndex, ticks) {
