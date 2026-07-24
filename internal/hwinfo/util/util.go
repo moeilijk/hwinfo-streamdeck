@@ -7,8 +7,8 @@ import "C"
 import (
 	"errors"
 	"fmt"
-	"log"
 	"strings"
+	"unicode/utf8"
 	"unsafe"
 
 	"golang.org/x/text/encoding/charmap"
@@ -46,12 +46,18 @@ func goStringFromPtr(ptr unsafe.Pointer, len int) string {
 	return s[:strings.IndexByte(s, 0)]
 }
 
-// DecodeCharPtr decodes ISO8859_1 string to UTF-8
+// DecodeCharPtr decodes a shared-memory string to UTF-8. HWiNFO exports
+// UTF-8 since v7.x (see issue #67); older versions used ANSI, which we
+// approximate as ISO8859-1. Valid UTF-8 passes through untouched, so "°C"
+// no longer arrives as "Â°C"; anything else falls back to ISO8859-1.
 func DecodeCharPtr(ptr unsafe.Pointer, len int) string {
 	s := goStringFromPtr(ptr, len)
+	if utf8.ValidString(s) {
+		return s
+	}
 	ds, err := decodeISO8859_1(s)
 	if err != nil {
-		log.Fatalf("TODO: failed to decode: %v", err)
+		return s
 	}
 	return ds
 }
