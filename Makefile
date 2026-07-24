@@ -41,6 +41,8 @@ debug:
 
 verify:
 	$(GOTARGETENV) $(CGOWINENV) $(GOCMD) build ./...
+	$(GOTARGETENV) $(GOBUILD) -o $(SDPLUGINDIR)/hwinfo.exe ./cmd/hwinfo_streamdeck_plugin
+	$(GOTARGETENV) $(CGOWINENV) $(GOBUILD) -o $(SDPLUGINDIR)/hwinfo-bridge.exe ./cmd/hwinfo-bridge
 	$(GOCMD) test $$($(GOCMD) list ./... 2>/dev/null | grep -v 'cmd/hwinfo_streamdeck_plugin\|cmd/hwinfo_debugger\|app/hwinfostreamdeckplugin')
 	bash scripts/verify-settings-pi.sh
 	streamdeck validate $(SDPLUGINDIR)
