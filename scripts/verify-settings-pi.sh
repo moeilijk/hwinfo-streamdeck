@@ -55,7 +55,6 @@ node scripts/test-dial-stacked-live-e2e.js
 echo "test: dial reverse-rotation live e2e (skips if DeckBridge not running)"
 node scripts/test-dial-reverse-live-e2e.js
 
-echo "test: Go targets (windows)"
 # Text-rendering tests load DejaVuSans-Bold.ttf from the package CWD; provide it
 # for the dial package and clean it up afterwards.
 dial_pkg="internal/app/hwinfostreamdeckplugin"
@@ -63,10 +62,23 @@ if [ ! -f "$dial_pkg/DejaVuSans-Bold.ttf" ]; then
   cp DejaVuSans-Bold.ttf "$dial_pkg/DejaVuSans-Bold.ttf"
   trap 'rm -f "'"$dial_pkg"'/DejaVuSans-Bold.ttf"' EXIT
 fi
-GOOS=windows GOARCH=amd64 GOCACHE=/tmp/go-build go test \
-  ./cmd/hwinfo_streamdeck_plugin \
-  ./internal/app/hwinfostreamdeckplugin \
-  ./pkg/streamdeck \
-  ./cmd/mock-bridge
+# On WSL the interop layer can execute Windows test binaries, so we test the
+# real GOOS=windows build. Elsewhere (CI on plain Linux) run the same packages
+# with the host GOOS; the windows compile itself is covered by the build step.
+if [ -f /proc/sys/fs/binfmt_misc/WSLInterop ]; then
+  echo "test: Go targets (windows via WSL interop)"
+  GOOS=windows GOARCH=amd64 GOCACHE=/tmp/go-build go test \
+    ./cmd/hwinfo_streamdeck_plugin \
+    ./internal/app/hwinfostreamdeckplugin \
+    ./pkg/streamdeck \
+    ./cmd/mock-bridge
+else
+  echo "test: Go targets (host GOOS)"
+  GOCACHE=/tmp/go-build go test \
+    ./cmd/hwinfo_streamdeck_plugin \
+    ./internal/app/hwinfostreamdeckplugin \
+    ./pkg/streamdeck \
+    ./cmd/mock-bridge
+fi
 
 echo "verify-settings-pi: ok"
