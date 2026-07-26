@@ -8,10 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"unicode/utf8"
 	"unsafe"
-
-	"golang.org/x/text/encoding/charmap"
 )
 
 // ErrFileNotFound Windows error
@@ -43,27 +40,17 @@ func HandleLastError(code uint64) error {
 
 func goStringFromPtr(ptr unsafe.Pointer, len int) string {
 	s := C.GoStringN((*C.char)(ptr), C.int(len))
-	return s[:strings.IndexByte(s, 0)]
+	// Fixed-width fields (e.g. the 4-byte signature "HWiS") may lack a NUL.
+	if i := strings.IndexByte(s, 0); i >= 0 {
+		return s[:i]
+	}
+	return s
 }
 
-// DecodeCharPtr decodes a shared-memory string to UTF-8. HWiNFO exports
-// UTF-8 since v7.x (see issue #67); older versions used ANSI, which we
-// approximate as ISO8859-1. Valid UTF-8 passes through untouched, so "°C"
-// no longer arrives as "Â°C"; anything else falls back to ISO8859-1.
+// DecodeCharPtr decodes a legacy (ANSI) shared-memory string; see
+// DecodeLegacy for the exact semantics and its limits. The UTF-8 fields
+// added in Shared Memory v2 (HWiNFO v7.33+) are read elsewhere and should
+// be preferred over these fields whenever present.
 func DecodeCharPtr(ptr unsafe.Pointer, len int) string {
-	s := goStringFromPtr(ptr, len)
-	if utf8.ValidString(s) {
-		return s
-	}
-	ds, err := decodeISO8859_1(s)
-	if err != nil {
-		return s
-	}
-	return ds
-}
-
-var isodecoder = charmap.ISO8859_1.NewDecoder()
-
-func decodeISO8859_1(in string) (string, error) {
-	return isodecoder.String(in)
+	return DecodeLegacy(goStringFromPtr(ptr, len))
 }

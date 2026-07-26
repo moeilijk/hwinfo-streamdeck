@@ -66,6 +66,7 @@ function connectElgatoStreamDeckSocket(inPort, inUUID, inRegisterEvent, inInfo, 
 
     if (payload.catalog) {
       currentCatalog = payload.catalog;
+      renderSourceFilter();
       renderSelectedPageSelection();
       renderActiveGlobals();
     }
@@ -212,11 +213,58 @@ function resetPageSelectionDraft(page) {
   };
 }
 
-function sensorMatchesFilter(sensor, term, category) {
+function sensorMatchesFilter(sensor, term, category, source) {
   var searchText = (sensor.searchText || [sensor.name, sensor.category, sensor.uid].join(" ")).toLowerCase();
   var sensorCategory = (sensor.category || "other").toLowerCase();
+  if (source !== null && source !== undefined && (sensor.source || "") !== source) return false;
   if (category && sensorCategory !== category) return false;
   return !term || searchText.indexOf(term) !== -1;
+}
+
+function sourceOfUid(uid) {
+  var i = (uid || "").indexOf("::");
+  return i >= 0 ? uid.slice(0, i) : "";
+}
+
+// The Source filter only appears when the bridge reports more than one
+// source (i.e. HWiNFO monitors remote machines).
+function selectedSourceFilter() {
+  var sources = currentCatalog.sources || [];
+  if (sources.length <= 1) return null;
+  var el = document.getElementById("pageSourceFilter");
+  return el ? el.value : null;
+}
+
+function renderSourceFilter() {
+  var row = document.getElementById("sourceFilterRow");
+  var heading = document.getElementById("sourceHeading");
+  var el = document.getElementById("pageSourceFilter");
+  if (!row || !el) return;
+
+  var sources = currentCatalog.sources || [];
+  var multi = sources.length > 1;
+  row.style.display = multi ? "" : "none";
+  if (heading) heading.style.display = multi ? "" : "none";
+  if (!multi) return;
+
+  var selected = el.dataset.userChoice !== undefined ? el.value : sourceOfUid(pageSelectionDraft.sensorUid);
+
+  el.innerHTML = "";
+  sources.forEach(function (src) {
+    var opt = document.createElement("option");
+    opt.value = src.id;
+    opt.textContent = src.name;
+    if (src.id === selected) opt.selected = true;
+    el.add(opt);
+  });
+
+  if (!el.dataset.bound) {
+    el.dataset.bound = "1";
+    el.addEventListener("change", function () {
+      el.dataset.userChoice = "1";
+      populateSelectedPageSensors();
+    });
+  }
 }
 
 function readingsForSensor(sensorUid) {
@@ -231,11 +279,12 @@ function populateSelectedPageSensors() {
   var selectedSensorUid = pageSelectionDraft.sensorUid || sel.value;
   var search = (document.getElementById("pageSensorSearch").value || "").trim().toLowerCase();
   var category = (document.getElementById("pageSensorCategoryFilter").value || "").trim().toLowerCase();
+  var source = selectedSourceFilter();
   var sensors = (currentCatalog.sensors || []).slice().sort(function (a, b) {
     return (a.name || "") > (b.name || "") ? 1 : (a.name || "") < (b.name || "") ? -1 : 0;
   });
   var filtered = sensors.filter(function (sensor) {
-    return sensorMatchesFilter(sensor, search, category);
+    return sensorMatchesFilter(sensor, search, category, source);
   });
   if (selectedSensorUid && !filtered.some(function (sensor) { return sensor.uid === selectedSensorUid; })) {
     sensors.forEach(function (sensor) {

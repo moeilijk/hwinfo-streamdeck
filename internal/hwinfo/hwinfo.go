@@ -11,6 +11,7 @@ import "C"
 import (
 	"fmt"
 	"log"
+	"strconv"
 	"time"
 	"unsafe"
 
@@ -24,18 +25,38 @@ type SharedMemory struct {
 	shmem C.PHWiNFO_SENSORS_SHARED_MEM2
 }
 
-// ReadSharedMem reads data from HWiNFO shared memory
+// ReadSharedMem reads data from the local HWiNFO shared memory
 // creating a copy of the data
 func ReadSharedMem() (*SharedMemory, error) {
-	data, err := shmem.ReadBytes()
+	return ReadSharedMemNamed(shmem.LocalMappingName)
+}
+
+// ReadSharedMemNamed reads data from a named HWiNFO shared-memory mapping
+// creating a copy of the data
+func ReadSharedMemNamed(name string) (*SharedMemory, error) {
+	data, err := shmem.ReadBytesNamed(name)
 	if err != nil {
 		return nil, err
 	}
 
 	return &SharedMemory{
-		data:  append([]byte(nil), data...),
+		data:  data,
 		shmem: C.PHWiNFO_SENSORS_SHARED_MEM2(unsafe.Pointer(&data[0])),
 	}, nil
+}
+
+// MaxRemoteSources bounds the remote mapping probe. HWiNFO numbers remote
+// machines 0-based in connection order; indices are probed each tick so
+// machines can come and go.
+const MaxRemoteSources = 8
+
+// SourceResult is one source's shared memory in a poll batch.
+type SourceResult struct {
+	// SourceID is "" for the local machine, or "remoteN" for the mapping
+	// HWiNFO_SENS_SM2_REMOTE_N.
+	SourceID string
+	Shmem    *SharedMemory
+	Err      error
 }
 
 // Result for streamed shared memory updates
@@ -44,20 +65,35 @@ type Result struct {
 	Err   error
 }
 
-func readAndSend(ch chan<- Result) {
-	shmem, err := ReadSharedMem()
-	ch <- Result{Shmem: shmem, Err: err}
+// ReadAllSources reads the local shared memory plus every present remote
+// mapping. The local source is always the first entry (possibly with Err
+// set); absent remote mappings are omitted.
+func ReadAllSources() []SourceResult {
+	local, err := ReadSharedMem()
+	out := []SourceResult{{SourceID: "", Shmem: local, Err: err}}
+
+	for i := 0; i < MaxRemoteSources; i++ {
+		name := shmem.RemoteMappingPrefix + strconv.Itoa(i)
+		sm, err := ReadSharedMemNamed(name)
+		if err != nil {
+			// Not connected (or gone); probed again next tick.
+			continue
+		}
+		out = append(out, SourceResult{SourceID: "remote" + strconv.Itoa(i), Shmem: sm})
+	}
+
+	return out
 }
 
-// StreamSharedMem delivers shared memory hardware sensors updates
-// over a channel
-func StreamSharedMem() <-chan Result {
-	ch := make(chan Result)
+// StreamSources delivers batches of shared memory updates for the local
+// machine and all connected remote machines
+func StreamSources() <-chan []SourceResult {
+	ch := make(chan []SourceResult)
 	go func() {
-		readAndSend(ch)
+		ch <- ReadAllSources()
 		// TODO: don't use time.Tick, cancellable?
 		for range time.Tick(1 * time.Second) {
-			readAndSend(ch)
+			ch <- ReadAllSources()
 		}
 	}()
 	return ch

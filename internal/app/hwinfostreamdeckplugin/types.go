@@ -118,6 +118,7 @@ type evSendSensorsPayloadSensor struct {
 	Name       string `json:"name"`
 	Category   string `json:"category,omitempty"`
 	SearchText string `json:"searchText,omitempty"`
+	Source     string `json:"source,omitempty"`
 }
 
 type evSendSensorsPayload struct {
@@ -135,6 +136,7 @@ type evSendReadingsPayloadReading struct {
 	SensorName string `json:"sensorName,omitempty"`
 	Category   string `json:"category,omitempty"`
 	SearchText string `json:"searchText,omitempty"`
+	Source     string `json:"source,omitempty"`
 }
 
 type evSendReadingsPayload struct {
@@ -142,10 +144,16 @@ type evSendReadingsPayload struct {
 	Settings *actionSettings                 `json:"settings"`
 }
 
+type evSendCatalogSource struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
 type evSendCatalogPayloadCatalog struct {
 	Sensors        []*evSendSensorsPayloadSensor   `json:"sensors"`
 	Readings       []*evSendReadingsPayloadReading `json:"readings"`
 	Favorites      []favoriteReading               `json:"favorites,omitempty"`
+	Sources        []evSendCatalogSource           `json:"sources,omitempty"`
 }
 
 type evSendCatalogPayload struct {

@@ -44,12 +44,16 @@ func (t ReadingType) String() string {
 // Reading element (e.g. usage, power, mhz...)
 type Reading struct {
 	cr C.PHWiNFO_SENSORS_READING_ELEMENT
+	// data is the raw element, sized by dwSizeOfReadingElement; its length
+	// decides whether the v2 UTF-8 fields are present.
+	data []byte
 }
 
 // NewReading contructs a Reading
 func NewReading(data []byte) Reading {
 	return Reading{
-		cr: C.PHWiNFO_SENSORS_READING_ELEMENT(unsafe.Pointer(&data[0])),
+		cr:   C.PHWiNFO_SENSORS_READING_ELEMENT(unsafe.Pointer(&data[0])),
+		data: data,
 	}
 }
 
@@ -84,9 +88,15 @@ func (r *Reading) LabelUser() string {
 	return util.DecodeCharPtr(unsafe.Pointer(&r.cr.szLabelUser), C.HWiNFO_SENSORS_STRING_LEN2)
 }
 
-// Unit e.g. "RPM"
+// Unit e.g. "RPM"; prefers the v2 UTF-8 field when present
 func (r *Reading) Unit() string {
-	return util.DecodeCharPtr(unsafe.Pointer(&r.cr.szUnit), C.HWiNFO_UNIT_STRING_LEN)
+	return util.PickUTF(utfField(r.data, offReadingUTFUnit, unitStringLen),
+		util.DecodeCharPtr(unsafe.Pointer(&r.cr.szUnit), C.HWiNFO_UNIT_STRING_LEN))
+}
+
+// UTFLabelUser is the v2 UTF-8 user label; empty on v1 shared memory
+func (r *Reading) UTFLabelUser() string {
+	return util.CString(utfField(r.data, offReadingUTFLabelUser, stringLen2))
 }
 
 func (r *Reading) valuePtr() unsafe.Pointer {

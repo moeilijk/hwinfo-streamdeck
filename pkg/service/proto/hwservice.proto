@@ -10,6 +10,7 @@ service HWService {
   rpc PollTime(google.protobuf.Empty) returns (PollTimeReply) {}
   rpc Sensors(google.protobuf.Empty) returns (stream Sensor) {}
   rpc ReadingsForSensorID(SensorIDRequest) returns (stream Reading) {}
+  rpc Sources(google.protobuf.Empty) returns (stream Source) {}
 }
 
 message PollTimeReply { uint64 pollTime = 1; }
@@ -17,6 +18,14 @@ message PollTimeReply { uint64 pollTime = 1; }
 message Sensor {
   string ID = 1;
   string name = 2;
+  string sourceID = 3;
+}
+
+message Source {
+  string ID = 1;
+  string name = 2;
+  uint64 pollTime = 3;
+  bool available = 4;
 }
 
 message SensorIDRequest { string id = 1; }

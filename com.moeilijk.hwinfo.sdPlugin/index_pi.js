@@ -8,6 +8,7 @@ var websocket = null,
   currentSensors = [],
   currentSensorSettings = {},
   currentCatalog = null,
+  currentSources = [], // sensor sources (local + remote machines) for the Source filter
   currentReadings = [], // store readings to look up unit when selection changes
   thresholdAdvancedOpen = {},
   thresholdSignature = null,
@@ -81,6 +82,8 @@ function connectElgatoStreamDeckSocket(inPort, inUUID, inRegisterEvent, inInfo, 
       event === "sendToPropertyInspector"
     ) {
       currentCatalog = jsonObj.payload.catalog;
+      currentSources = Array.isArray(jsonObj.payload.catalog.sources) ? jsonObj.payload.catalog.sources : [];
+      renderSourceFilter();
       renderFavoriteControls();
     }
     if (
@@ -187,9 +190,12 @@ function sortBy(key) {
   };
 }
 
-function sensorMatchesFilter(sensor, term, category) {
+function sensorMatchesFilter(sensor, term, category, source) {
   var searchText = (sensor.searchText || `${sensor.name || ""} ${sensor.category || ""}`).toLowerCase();
   var sensorCategory = (sensor.category || "other").toLowerCase();
+  if (source !== null && source !== undefined && (sensor.source || "") !== source) {
+    return false;
+  }
   if (category && sensorCategory !== category) {
     return false;
   }
@@ -197,6 +203,64 @@ function sensorMatchesFilter(sensor, term, category) {
     return true;
   }
   return searchText.includes(term);
+}
+
+function sourceOfUid(uid) {
+  var i = (uid || "").indexOf("::");
+  return i >= 0 ? uid.slice(0, i) : "";
+}
+
+// The Source filter only appears when the bridge reports more than one
+// source (i.e. HWiNFO monitors remote machines); with just the local
+// machine it stays hidden and filtering is disabled.
+function selectedSourceFilter() {
+  if (!currentSources || currentSources.length <= 1) {
+    return null;
+  }
+  var el = document.querySelector("#sourceFilter");
+  return el ? el.value : null;
+}
+
+function renderSourceFilter() {
+  var row = document.querySelector("#sourceFilterRow");
+  var heading = document.querySelector("#sourceHeading");
+  var el = document.querySelector("#sourceFilter");
+  if (!row || !el) {
+    return;
+  }
+
+  var multi = currentSources && currentSources.length > 1;
+  row.style.display = multi ? "" : "none";
+  if (heading) heading.style.display = multi ? "" : "none";
+  if (!multi) {
+    return;
+  }
+
+  var settings = currentSensorSettings || {};
+  var selected = el.dataset.userChoice !== undefined ? el.value : sourceOfUid(settings.sensorUid);
+
+  var i;
+  for (i = el.options.length - 1; i >= 0; i--) {
+    el.remove(i);
+  }
+  currentSources.forEach(function (src) {
+    var option = document.createElement("option");
+    option.text = src.name;
+    option.value = src.id;
+    if (src.id === selected) {
+      option.selected = true;
+    }
+    el.add(option);
+  });
+
+  if (!el.dataset.bound) {
+    el.dataset.bound = "1";
+    el.addEventListener("change", function () {
+      el.dataset.userChoice = "1";
+      renderSensorOptions(false);
+    });
+  }
+  renderSensorOptions(false);
 }
 
 function renderSensorOptions(triggerSelectionChange) {
@@ -216,10 +280,11 @@ function renderSensorOptions(triggerSelectionChange) {
   var categorySelect = document.querySelector("#sensorCategoryFilter");
   var term = searchInput ? searchInput.value.trim().toLowerCase() : "";
   var category = categorySelect ? categorySelect.value.trim().toLowerCase() : "";
+  var source = selectedSourceFilter();
   var settings = currentSensorSettings || {};
   var sensors = (currentSensors || []).slice().sort(sortBy("name"));
   var filteredSensors = sensors.filter(function(sensor) {
-    return sensorMatchesFilter(sensor, term, category);
+    return sensorMatchesFilter(sensor, term, category, source);
   });
   if (settings.sensorUid && !filteredSensors.some(function(sensor) {
     return sensor.uid === settings.sensorUid;

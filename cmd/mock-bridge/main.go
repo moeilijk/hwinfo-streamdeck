@@ -8,6 +8,7 @@
 //	POST /set {"path":"/mockcpu/0/temperature/0","value":85.0} — change a reading
 //	POST /reset — restore all defaults
 //	GET  /list — dump current readings
+//	POST /source {"id":"remote0","present":true,"available":true} — control the mock remote source
 package main
 
 import (
@@ -47,6 +48,35 @@ var sensors = []mockSensor{
 	{id: "/mocksys/0", name: "Mock System"},
 }
 
+// The mock remote source mirrors HWiNFO's remote shared-memory mappings:
+// sensors are served under source-qualified UIDs and disappear (or go
+// unavailable) on demand via the /source control endpoint.
+const mockRemoteSourceID = "remote0"
+
+var remoteSensors = []mockSensor{
+	{id: "/remotecpu/0", name: "Remote CPU"},
+	{id: "/remotesys/0", name: "Remote System"},
+}
+
+type remoteSourceState struct {
+	present   bool
+	available bool
+}
+
+func defaultRemoteReadings() map[string]*mockReading {
+	list := []*mockReading{
+		{path: "/remotecpu/0/temperature/0", sensor: "/remotecpu/0", label: "CPU Package", typ: "Temp", unit: "°C", defVal: 51, min: 20, max: 100},
+		{path: "/remotecpu/0/load/0", sensor: "/remotecpu/0", label: "CPU Total", typ: "Usage", unit: "%", defVal: 30, min: 0, max: 100},
+		{path: "/remotesys/0/fan/0", sensor: "/remotesys/0", label: "CPU Fan", typ: "Fan", unit: "RPM", defVal: 900, min: 0, max: 3000},
+	}
+	m := make(map[string]*mockReading, len(list))
+	for _, r := range list {
+		r.cur = r.defVal
+		m[r.path] = r
+	}
+	return m
+}
+
 func defaultReadings() map[string]*mockReading {
 	list := []*mockReading{
 		{path: "/mockcpu/0/temperature/0", sensor: "/mockcpu/0", label: "CPU Package", typ: "Temp", unit: "°C", defVal: 45, min: 20, max: 100},
@@ -66,8 +96,10 @@ func defaultReadings() map[string]*mockReading {
 }
 
 var (
-	mu       sync.RWMutex
-	readings = defaultReadings()
+	mu             sync.RWMutex
+	readings       = defaultReadings()
+	remoteReadings = defaultRemoteReadings()
+	remoteSource   = remoteSourceState{}
 )
 
 func readingID(sensorID, path string) int32 {
@@ -109,12 +141,26 @@ func (r reading) ValueMax() float64        { return r.max }
 func (r reading) ValueAvg() float64        { return r.value }
 
 type sensor struct {
-	id   string
-	name string
+	id       string
+	name     string
+	sourceID string
 }
 
-func (s sensor) ID() string   { return s.id }
-func (s sensor) Name() string { return s.name }
+func (s sensor) ID() string       { return s.id }
+func (s sensor) Name() string     { return s.name }
+func (s sensor) SourceID() string { return s.sourceID }
+
+type source struct {
+	id        string
+	name      string
+	pollTime  uint64
+	available bool
+}
+
+func (s source) ID() string       { return s.id }
+func (s source) Name() string     { return s.name }
+func (s source) PollTime() uint64 { return s.pollTime }
+func (s source) Available() bool  { return s.available }
 
 // service implements hwsensorsservice.HardwareService over the mock data.
 type service struct{}
@@ -123,20 +169,66 @@ func (service) PollTime() (uint64, error) {
 	return uint64(time.Now().UnixNano()), nil
 }
 
+func (service) Sources() ([]hwsensorsservice.Source, error) {
+	mu.RLock()
+	defer mu.RUnlock()
+	now := uint64(time.Now().UnixNano())
+	out := []hwsensorsservice.Source{
+		source{id: hwsensorsservice.LocalSourceID, name: "Local", pollTime: now, available: true},
+	}
+	if remoteSource.present {
+		pollTime := now
+		if !remoteSource.available {
+			// An unavailable source stops polling; report a stale time so
+			// the plugin's staleness gate reacts just like with real HWiNFO.
+			pollTime = now - uint64(time.Minute)
+		}
+		out = append(out, source{
+			id:        mockRemoteSourceID,
+			name:      hwsensorsservice.SourceDisplayName(mockRemoteSourceID),
+			pollTime:  pollTime,
+			available: remoteSource.available,
+		})
+	}
+	return out, nil
+}
+
 func (service) Sensors() ([]hwsensorsservice.Sensor, error) {
-	out := make([]hwsensorsservice.Sensor, 0, len(sensors))
+	mu.RLock()
+	defer mu.RUnlock()
+	out := make([]hwsensorsservice.Sensor, 0, len(sensors)+len(remoteSensors))
 	for _, s := range sensors {
-		out = append(out, sensor{id: s.id, name: s.name})
+		out = append(out, sensor{id: s.id, name: s.name, sourceID: hwsensorsservice.LocalSourceID})
+	}
+	if remoteSource.present {
+		for _, s := range remoteSensors {
+			out = append(out, sensor{
+				id:       hwsensorsservice.ComposeSensorUID(mockRemoteSourceID, s.id),
+				name:     s.name,
+				sourceID: mockRemoteSourceID,
+			})
+		}
 	}
 	return out, nil
 }
 
 func (service) ReadingsForSensorID(id string) ([]hwsensorsservice.Reading, error) {
+	sourceID, sensorID := hwsensorsservice.SplitSensorUID(id)
+
 	mu.RLock()
 	defer mu.RUnlock()
+
+	pool := readings
+	if sourceID != hwsensorsservice.LocalSourceID {
+		if sourceID != mockRemoteSourceID || !remoteSource.present {
+			return nil, fmt.Errorf("source %q unavailable", sourceID)
+		}
+		pool = remoteReadings
+	}
+
 	var out []hwsensorsservice.Reading
-	for _, r := range readings {
-		if r.sensor == id {
+	for _, r := range pool {
+		if r.sensor == sensorID {
 			out = append(out, reading{
 				id:    readingID(r.sensor, r.path),
 				typ:   r.typ,
@@ -170,6 +262,9 @@ func handleSet(w http.ResponseWriter, r *http.Request) {
 	mu.Lock()
 	rd, ok := readings[req.Path]
 	if !ok {
+		rd, ok = remoteReadings[req.Path]
+	}
+	if !ok {
 		mu.Unlock()
 		http.Error(w, "unknown path: "+req.Path, http.StatusNotFound)
 		return
@@ -179,6 +274,30 @@ func handleSet(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, `{"ok":true,"path":%q,"value":%g}`, req.Path, req.Value)
 }
 
+func handleSource(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "POST only", http.StatusMethodNotAllowed)
+		return
+	}
+	var req struct {
+		ID        string `json:"id"`
+		Present   bool   `json:"present"`
+		Available bool   `json:"available"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if req.ID != mockRemoteSourceID {
+		http.Error(w, "unknown source: "+req.ID, http.StatusNotFound)
+		return
+	}
+	mu.Lock()
+	remoteSource = remoteSourceState{present: req.Present, available: req.Available}
+	mu.Unlock()
+	fmt.Fprintf(w, `{"ok":true,"id":%q,"present":%t,"available":%t}`, req.ID, req.Present, req.Available)
+}
+
 func handleReset(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "POST only", http.StatusMethodNotAllowed)
@@ -186,6 +305,8 @@ func handleReset(w http.ResponseWriter, r *http.Request) {
 	}
 	mu.Lock()
 	readings = defaultReadings()
+	remoteReadings = defaultRemoteReadings()
+	remoteSource = remoteSourceState{}
 	mu.Unlock()
 	fmt.Fprint(w, `{"ok":true}`)
 }
@@ -218,6 +339,7 @@ func main() {
 	mux.HandleFunc("/set", handleSet)
 	mux.HandleFunc("/reset", handleReset)
 	mux.HandleFunc("/list", handleList)
+	mux.HandleFunc("/source", handleSource)
 	go func() {
 		// The control server is best-effort: a bind failure (port in use after a
 		// bridge restart) must not take down the gRPC side.

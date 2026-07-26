@@ -26,6 +26,7 @@ type HWServiceClient interface {
 	PollTime(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*PollTimeReply, error)
 	Sensors(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (HWService_SensorsClient, error)
 	ReadingsForSensorID(ctx context.Context, in *SensorIDRequest, opts ...grpc.CallOption) (HWService_ReadingsForSensorIDClient, error)
+	Sources(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (HWService_SourcesClient, error)
 }
 
 type hWServiceClient struct {
@@ -109,6 +110,38 @@ func (x *hWServiceReadingsForSensorIDClient) Recv() (*Reading, error) {
 	return m, nil
 }
 
+func (c *hWServiceClient) Sources(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (HWService_SourcesClient, error) {
+	stream, err := c.cc.NewStream(ctx, &HWService_ServiceDesc.Streams[2], "/proto.HWService/Sources", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &hWServiceSourcesClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type HWService_SourcesClient interface {
+	Recv() (*Source, error)
+	grpc.ClientStream
+}
+
+type hWServiceSourcesClient struct {
+	grpc.ClientStream
+}
+
+func (x *hWServiceSourcesClient) Recv() (*Source, error) {
+	m := new(Source)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // HWServiceServer is the server API for HWService service.
 // All implementations must embed UnimplementedHWServiceServer
 // for forward compatibility
@@ -116,6 +149,7 @@ type HWServiceServer interface {
 	PollTime(context.Context, *emptypb.Empty) (*PollTimeReply, error)
 	Sensors(*emptypb.Empty, HWService_SensorsServer) error
 	ReadingsForSensorID(*SensorIDRequest, HWService_ReadingsForSensorIDServer) error
+	Sources(*emptypb.Empty, HWService_SourcesServer) error
 	mustEmbedUnimplementedHWServiceServer()
 }
 
@@ -131,6 +165,9 @@ func (UnimplementedHWServiceServer) Sensors(*emptypb.Empty, HWService_SensorsSer
 }
 func (UnimplementedHWServiceServer) ReadingsForSensorID(*SensorIDRequest, HWService_ReadingsForSensorIDServer) error {
 	return status.Errorf(codes.Unimplemented, "method ReadingsForSensorID not implemented")
+}
+func (UnimplementedHWServiceServer) Sources(*emptypb.Empty, HWService_SourcesServer) error {
+	return status.Errorf(codes.Unimplemented, "method Sources not implemented")
 }
 func (UnimplementedHWServiceServer) mustEmbedUnimplementedHWServiceServer() {}
 
@@ -205,6 +242,27 @@ func (x *hWServiceReadingsForSensorIDServer) Send(m *Reading) error {
 	return x.ServerStream.SendMsg(m)
 }
 
+func _HWService_Sources_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(emptypb.Empty)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(HWServiceServer).Sources(m, &hWServiceSourcesServer{stream})
+}
+
+type HWService_SourcesServer interface {
+	Send(*Source) error
+	grpc.ServerStream
+}
+
+type hWServiceSourcesServer struct {
+	grpc.ServerStream
+}
+
+func (x *hWServiceSourcesServer) Send(m *Source) error {
+	return x.ServerStream.SendMsg(m)
+}
+
 // HWService_ServiceDesc is the grpc.ServiceDesc for HWService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -226,6 +284,11 @@ var HWService_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "ReadingsForSensorID",
 			Handler:       _HWService_ReadingsForSensorID_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "Sources",
+			Handler:       _HWService_Sources_Handler,
 			ServerStreams: true,
 		},
 	},

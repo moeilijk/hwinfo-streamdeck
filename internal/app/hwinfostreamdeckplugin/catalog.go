@@ -83,16 +83,19 @@ func searchText(parts ...string) string {
 
 func sensorPayload(sensorID, sensorName string) *evSendSensorsPayloadSensor {
 	category := sensorCategory(sensorID, sensorName)
+	source, _ := hwsensorsservice.SplitSensorUID(sensorID)
 	return &evSendSensorsPayloadSensor{
 		UID:        sensorID,
 		Name:       sensorName,
 		Category:   category,
-		SearchText: searchText(sensorName, category, sensorID),
+		SearchText: searchText(sensorName, category, sensorID, hwsensorsservice.SourceDisplayName(source)),
+		Source:     source,
 	}
 }
 
 func readingPayload(sensorID, sensorName string, reading hwsensorsservice.Reading) *evSendReadingsPayloadReading {
 	category := sensorCategory(sensorID, sensorName)
+	source, _ := hwsensorsservice.SplitSensorUID(sensorID)
 	return &evSendReadingsPayloadReading{
 		ID:         reading.ID(),
 		Label:      reading.Label(),
@@ -102,7 +105,8 @@ func readingPayload(sensorID, sensorName string, reading hwsensorsservice.Readin
 		SensorUID:  sensorID,
 		SensorName: sensorName,
 		Category:   category,
-		SearchText: searchText(sensorName, category, reading.Type(), reading.Label(), reading.Unit()),
+		SearchText: searchText(sensorName, category, reading.Type(), reading.Label(), reading.Unit(), hwsensorsservice.SourceDisplayName(source)),
+		Source:     source,
 	}
 }
 
@@ -134,6 +138,8 @@ func (p *Plugin) sendCatalogToPropertyInspector(action, context string, settings
 		Favorites: p.favoriteReadingsSnapshot(),
 	}
 
+	catalog.Sources = p.sourcesPayload()
+
 	for _, sensor := range sensors {
 		sensorID := sensor.ID()
 		sensorName := sensor.Name()
@@ -152,6 +158,27 @@ func (p *Plugin) sendCatalogToPropertyInspector(action, context string, settings
 
 	payload := evSendCatalogPayload{Catalog: catalog, Settings: settings}
 	return p.sd.SendToPropertyInspector(action, context, payload)
+}
+
+// sourcesPayload lists the bridge's sensor sources for the Property
+// Inspectors' Source dropdown; nil (dropdown hidden) when unavailable.
+func (p *Plugin) sourcesPayload() []evSendCatalogSource {
+	rt := p.bridge
+	rt.mu.RLock()
+	hw := rt.hw
+	rt.mu.RUnlock()
+	if hw == nil {
+		return nil
+	}
+	sources, err := hw.Sources()
+	if err != nil {
+		return nil
+	}
+	out := make([]evSendCatalogSource, 0, len(sources))
+	for _, src := range sources {
+		out = append(out, evSendCatalogSource{ID: src.ID(), Name: src.Name()})
+	}
+	return out
 }
 
 func favoriteID(sensorUID string, readingID int32) string {

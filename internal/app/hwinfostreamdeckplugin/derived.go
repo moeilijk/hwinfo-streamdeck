@@ -204,6 +204,11 @@ func (p *Plugin) updateDerivedTile(ctx string) {
 		if !slot.IsValid || slot.SensorUID == "" {
 			continue
 		}
+		// A remote source that vanished or stopped polling must not feed
+		// the formula its last frozen value.
+		if !p.sourceFreshForUID(slot.SensorUID) {
+			continue
+		}
 		r, _, err := p.getReading(slot.SensorUID, slot.ReadingID)
 		if err != nil {
 			continue
@@ -484,6 +489,7 @@ func (p *Plugin) handleDerivedPropertyInspectorConnected(event *streamdeck.EvSen
 
 	payload := map[string]interface{}{
 		"sensors":          evsensors,
+		"sources":          p.sourcesPayload(),
 		"derivedSettings":  settingsCopy,
 		"favorites":        p.favoriteReadingsSnapshot(),
 		"globalThresholds": globals,

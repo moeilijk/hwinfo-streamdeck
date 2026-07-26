@@ -21,16 +21,21 @@
     <div class="sdpi-item">
       <details open class="message caution">
         <summary>Unable To Communicate With Sensor Source</summary>
-        <p>The plugin is unable to communicate with the configured sensor source.</p>
-        <p>Make sure it's running and the remote web server is enabled on port 8085.</p>
+        <p>The plugin is unable to communicate with HWiNFO.</p>
+        <p>Make sure HWiNFO64 is running in <strong>Sensors-only</strong> mode with
+          <strong>Shared Memory Support</strong> enabled under Settings.</p>
       </details>
     </div>
   </div>
 
   <div id="ui" class="sdpi-wrapper localbody hiddenx">
 
-    <div class="sdpi-heading">Source</div>
+    <div class="sdpi-heading" id="sourceHeading" style="display:none;">Source</div>
 
+    <div class="sdpi-item" id="sourceFilterRow" style="display:none;">
+      <div class="sdpi-item-label">Source</div>
+      <select class="sdpi-item-value select" id="sourceFilter"></select>
+    </div>
 
     <div class="sdpi-heading">Tile Settings</div>
 

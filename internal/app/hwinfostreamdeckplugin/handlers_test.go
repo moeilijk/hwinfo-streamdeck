@@ -52,6 +52,7 @@ func TestApplyReadingSettingsUsesBridge(t *testing.T) {
 
 type stubHardwareService struct {
 	readingsBySensor map[string][]hwsensorsservice.Reading
+	sources          []hwsensorsservice.Source
 }
 
 func (s stubHardwareService) PollTime() (uint64, error) {
@@ -65,3 +66,21 @@ func (s stubHardwareService) Sensors() ([]hwsensorsservice.Sensor, error) {
 func (s stubHardwareService) ReadingsForSensorID(id string) ([]hwsensorsservice.Reading, error) {
 	return s.readingsBySensor[id], nil
 }
+
+func (s stubHardwareService) Sources() ([]hwsensorsservice.Source, error) {
+	if s.sources != nil {
+		return s.sources, nil
+	}
+	return []hwsensorsservice.Source{stubSource{id: hwsensorsservice.LocalSourceID, pollTime: 1, available: true}}, nil
+}
+
+type stubSource struct {
+	id        string
+	pollTime  uint64
+	available bool
+}
+
+func (s stubSource) ID() string       { return s.id }
+func (s stubSource) Name() string     { return hwsensorsservice.SourceDisplayName(s.id) }
+func (s stubSource) PollTime() uint64 { return s.pollTime }
+func (s stubSource) Available() bool  { return s.available }

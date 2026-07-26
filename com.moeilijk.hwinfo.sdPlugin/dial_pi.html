@@ -77,11 +77,16 @@
   </div>
 
   <div id="ui" class="sdpi-wrapper localbody hiddenx">
-    <div class="sdpi-heading">Source</div>
+    <div class="sdpi-heading" id="sourceHeading" style="display:none;">Source</div>
 
     <!-- Build: 3c5e9b5 + V5-prep.41 (plugin commit 3c5e9b5 plus local V5 prep fixes).
          Kept as a comment for traceability without taking up PI space; bump it
          together with the ?v= cache-busters at the bottom of this file. -->
+
+    <div class="sdpi-item" id="sourceFilterRow" style="display:none;">
+      <div class="sdpi-item-label">Source</div>
+      <select class="sdpi-item-value select" id="pageSourceFilter"></select>
+    </div>
 
 
     <div class="sdpi-heading">Dial Pages</div>

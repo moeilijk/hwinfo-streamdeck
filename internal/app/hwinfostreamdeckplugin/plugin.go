@@ -35,6 +35,9 @@ type bridgeRuntime struct {
 	// poll time cache — accessed under Plugin.mu
 	cachedPollTime uint64
 	cachedAt       time.Time
+	// source list cache (remote machines) — accessed under Plugin.mu
+	cachedSources   []hwsensorsservice.Source
+	cachedSourcesAt time.Time
 }
 
 // Plugin handles information between HWiNFO and Stream Deck
@@ -252,6 +255,86 @@ func (p *Plugin) getCachedPollTime() (uint64, error) {
 func invalidatePollCacheForRuntime(rt *bridgeRuntime) {
 	rt.cachedPollTime = 0
 	rt.cachedAt = time.Time{}
+	rt.cachedSources = nil
+	rt.cachedSourcesAt = time.Time{}
+}
+
+// getCachedSources returns the bridge's source list, cached like PollTime.
+func (p *Plugin) getCachedSources() ([]hwsensorsservice.Source, error) {
+	rt := p.bridge
+	rt.mu.RLock()
+	hw := rt.hw
+	rt.mu.RUnlock()
+	if hw == nil {
+		return nil, fmt.Errorf("HWiNFO bridge not ready")
+	}
+
+	p.mu.RLock()
+	cacheTTL := p.pollTimeCacheTTL
+	if cacheTTL == 0 {
+		cacheTTL = defaultPollInterval
+	}
+	if !rt.cachedSourcesAt.IsZero() && time.Since(rt.cachedSourcesAt) < cacheTTL {
+		sources := rt.cachedSources
+		p.mu.RUnlock()
+		return sources, nil
+	}
+	p.mu.RUnlock()
+
+	sources, err := hw.Sources()
+
+	p.mu.Lock()
+	if err != nil {
+		rt.cachedSources = nil
+		rt.cachedSourcesAt = time.Now()
+		p.mu.Unlock()
+		return nil, err
+	}
+	rt.cachedSources = sources
+	rt.cachedSourcesAt = time.Now()
+	p.mu.Unlock()
+
+	return sources, nil
+}
+
+// pollTimeForUID returns the poll time that gates rendering for a sensor
+// UID: the local poll time for plain UIDs, the owning source's poll time for
+// source-qualified (remote) UIDs. A missing or unavailable source is an
+// error, so callers fall through to their existing unavailable handling.
+func (p *Plugin) pollTimeForUID(uid string) (uint64, error) {
+	sourceID, _ := hwsensorsservice.SplitSensorUID(uid)
+	if sourceID == hwsensorsservice.LocalSourceID {
+		return p.getCachedPollTime()
+	}
+
+	sources, err := p.getCachedSources()
+	if err != nil {
+		return 0, err
+	}
+	for _, s := range sources {
+		if s.ID() == sourceID {
+			if !s.Available() {
+				return 0, fmt.Errorf("source %s unavailable", sourceID)
+			}
+			return s.PollTime(), nil
+		}
+	}
+	return 0, fmt.Errorf("source %s not present", sourceID)
+}
+
+// sourceFreshForUID reports whether a sensor UID's source is present,
+// available, and recently polled. Local UIDs are always fresh here: the
+// local staleness gate already runs at tile level.
+func (p *Plugin) sourceFreshForUID(uid string) bool {
+	sourceID, _ := hwsensorsservice.SplitSensorUID(uid)
+	if sourceID == hwsensorsservice.LocalSourceID {
+		return true
+	}
+	pollTime, err := p.pollTimeForUID(uid)
+	if err != nil || pollTime == 0 {
+		return false
+	}
+	return time.Since(time.Unix(0, int64(pollTime))) <= 5*time.Second
 }
 
 // startBridgeClient acquires rt.mu and starts the bridge.
@@ -514,7 +597,7 @@ func (p *Plugin) updateTiles(data *actionData) {
 	s := data.settings
 	forceUpdate := p.consumeThresholdDirty(data.context)
 
-	pollTime, err := p.getCachedPollTime()
+	pollTime, err := p.pollTimeForUID(s.SensorUID)
 	if err != nil {
 		log.Printf("PollTime failed: %v\n", err)
 		showUnavailable()

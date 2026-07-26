@@ -49,3 +49,38 @@ func TestDecodeActionSettingsHWiNFOv205(t *testing.T) {
 		t.Errorf("appearance fields altered: title=%q format=%q", settings.Title, settings.Format)
 	}
 }
+
+// TestDecodeActionSettingsRemoteSourceUID guards the remote-sensor uid scheme:
+// a source-qualified sensorUid travels through the stable `sensorUid` json tag
+// as an opaque string, without a new settings field and without touching plain
+// local uids.
+func TestDecodeActionSettingsRemoteSourceUID(t *testing.T) {
+	remote := json.RawMessage(`{
+		"sensorUid": "remote0::1229870",
+		"readingId": "134217730",
+		"isValid": true
+	}`)
+
+	settings, migrated, err := decodeActionSettings(&remote)
+	if err != nil {
+		t.Fatalf("decodeActionSettings: %v", err)
+	}
+	if migrated {
+		t.Fatalf("remote uid must not trigger legacy migration")
+	}
+	if settings.SensorUID != "remote0::1229870" {
+		t.Errorf("SensorUID = %q, want opaque source-qualified uid", settings.SensorUID)
+	}
+
+	out, err := json.Marshal(settings)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	var roundTrip map[string]interface{}
+	if err := json.Unmarshal(out, &roundTrip); err != nil {
+		t.Fatalf("unmarshal roundtrip: %v", err)
+	}
+	if roundTrip["sensorUid"] != "remote0::1229870" {
+		t.Errorf("roundtrip sensorUid = %v, want remote0::1229870", roundTrip["sensorUid"])
+	}
+}

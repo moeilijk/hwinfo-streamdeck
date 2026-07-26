@@ -419,6 +419,13 @@ func (p *Plugin) updateCompositeTile(ctx string) {
 			continue
 		}
 
+		// A remote source that vanished or stopped polling must not freeze
+		// the slot on its last value.
+		if !p.sourceFreshForUID(slot.SensorUID) {
+			displayTexts[i] = "—"
+			continue
+		}
+
 		r, _, err := p.getReading(slot.SensorUID, slot.ReadingID)
 		if err != nil {
 			displayTexts[i] = "—"
@@ -576,6 +583,7 @@ func (p *Plugin) handleCompositePropertyInspectorConnected(event *streamdeck.EvS
 
 	payload := map[string]interface{}{
 		"sensors":           evsensors,
+		"sources":           p.sourcesPayload(),
 		"compositeSettings": settingsCopy,
 		"globalThresholds":  globals,
 	}

@@ -28,6 +28,17 @@ type HardwareService interface {
 	PollTime() (uint64, error)
 	Sensors() ([]Sensor, error)
 	ReadingsForSensorID(id string) ([]Reading, error)
+	Sources() ([]Source, error)
+}
+
+// Source is a machine whose sensors the bridge exposes: the local shared
+// memory, or a remote machine monitored by HWiNFO. Sensors of non-local
+// sources carry source-qualified UIDs (see ComposeSensorUID).
+type Source interface {
+	ID() string
+	Name() string
+	PollTime() uint64
+	Available() bool
 }
 
 // HardwareServicePlugin is the implementation of plugin.GRPCPlugin so we can serve/consume this.
@@ -54,6 +65,7 @@ func (p *HardwareServicePlugin) GRPCClient(ctx context.Context, broker *plugin.G
 type Sensor interface {
 	ID() string
 	Name() string
+	SourceID() string
 }
 
 // ReadingType enum of value/unit type for reading
@@ -108,6 +120,30 @@ func (s sensor) ID() string {
 
 func (s sensor) Name() string {
 	return s.Sensor.GetName()
+}
+
+func (s sensor) SourceID() string {
+	return s.Sensor.GetSourceID()
+}
+
+type source struct {
+	*proto.Source
+}
+
+func (s source) ID() string {
+	return s.Source.GetID()
+}
+
+func (s source) Name() string {
+	return s.Source.GetName()
+}
+
+func (s source) PollTime() uint64 {
+	return s.Source.GetPollTime()
+}
+
+func (s source) Available() bool {
+	return s.Source.GetAvailable()
 }
 
 type reading struct {

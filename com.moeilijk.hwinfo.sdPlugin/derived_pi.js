@@ -2,6 +2,7 @@ var websocket = null,
   uuid = null,
   actionInfo = {},
   allSensors = [],
+  allSources = [],
   allPresets = [],
   allFavorites = [],
   currentSettings = {},
@@ -64,6 +65,13 @@ function connectElgatoStreamDeckSocket(inPort, inUUID, inRegisterEvent, inInfo, 
       }
     }
 
+
+    // Sensor sources (local + remote machines); must land before the
+    // sensor list so the Source filter applies to this payload's sensors.
+    if (Array.isArray(payload.sources)) {
+      allSources = payload.sources;
+      renderSourceFilter();
+    }
 
     // Sensor list
     if (Array.isArray(payload.sensors)) {
@@ -135,14 +143,78 @@ function populateFavoriteSelect(slotIdx, favorites) {
 
 // --- sensor / reading dropdowns ---
 
+function sourceOfUid(uid) {
+  var i = (uid || "").indexOf("::");
+  return i >= 0 ? uid.slice(0, i) : "";
+}
+
+// The Source filter only appears when the bridge reports more than one
+// source (i.e. HWiNFO monitors remote machines). It filters the sensor
+// dropdowns of all slots; the stored uids carry the source themselves.
+function selectedSourceFilter() {
+  if (!allSources || allSources.length <= 1) return null;
+  var el = byId("sourceFilter");
+  return el ? el.value : null;
+}
+
+function firstConfiguredSource() {
+  var slots = currentSettings.slots || [];
+  for (var i = 0; i < slots.length; i++) {
+    if (slots[i] && slots[i].sensorUid) return sourceOfUid(slots[i].sensorUid);
+  }
+  return "";
+}
+
+function renderSourceFilter() {
+  var row = byId("sourceFilterRow");
+  var heading = byId("sourceHeading");
+  var el = byId("sourceFilter");
+  if (!row || !el) return;
+
+  var multi = allSources && allSources.length > 1;
+  row.style.display = multi ? "" : "none";
+  if (heading) heading.style.display = multi ? "" : "none";
+  if (!multi) return;
+
+  var selected = el.dataset.userChoice !== undefined ? el.value : firstConfiguredSource();
+
+  while (el.options.length) el.remove(0);
+  allSources.forEach(function (src) {
+    var opt = document.createElement("option");
+    opt.value = src.id;
+    opt.text = src.name;
+    if (src.id === selected) opt.selected = true;
+    el.add(opt);
+  });
+
+  if (!el.dataset.bound) {
+    el.dataset.bound = "1";
+    el.addEventListener("change", function () {
+      el.dataset.userChoice = "1";
+      for (var i = 0; i < 8; i++) {
+        populateSensorSelect(i, allSensors);
+      }
+      populateAllSlotsSensorSelect(allSensors);
+    });
+  }
+}
+
+function applySourceFilterToSensors(sorted, currentUid) {
+  var source = selectedSourceFilter();
+  if (source === null) return sorted;
+  return sorted.filter(function (sensor) {
+    return (sensor.source || "") === source || sensor.uid === currentUid;
+  });
+}
+
 function populateSensorSelect(slotIdx, sensors) {
   var el = byId("slot" + slotIdx + "_sensorSelect");
   if (!el) return;
   var currentUid = (currentSettings.slots && currentSettings.slots[slotIdx])
     ? currentSettings.slots[slotIdx].sensorUid : "";
-  var sorted = sensors.slice().sort(function (a, b) {
+  var sorted = applySourceFilterToSensors(sensors.slice().sort(function (a, b) {
     return a.name > b.name ? 1 : a.name < b.name ? -1 : 0;
-  });
+  }), currentUid);
 
   while (el.options.length) el.remove(0);
   var ph = document.createElement("option");
@@ -164,9 +236,9 @@ function populateSensorSelect(slotIdx, sensors) {
 function populateAllSlotsSensorSelect(sensors) {
   var el = byId("allSlots_sensorSelect");
   if (!el) return;
-  var sorted = sensors.slice().sort(function (a, b) {
+  var sorted = applySourceFilterToSensors(sensors.slice().sort(function (a, b) {
     return a.name > b.name ? 1 : a.name < b.name ? -1 : 0;
-  });
+  }), "");
 
   while (el.options.length) el.remove(0);
   var ph = document.createElement("option");

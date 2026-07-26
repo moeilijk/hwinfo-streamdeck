@@ -1018,11 +1018,15 @@ func (p *Plugin) updateDialPage(ctx string, settings *dialActionSettings, state 
 
 	pageCtx := dialPageContext(ctx, index)
 	g := state.graphs[index]
-	pollTime, err := p.getCachedPollTime()
+	pollTime, err := p.pollTimeForUID(page.SensorUID)
 	if err != nil || pollTime == 0 {
 		if active {
 			render.messageTitle = "HWiNFO Dial"
-			render.messageValue = "HWiNFO unavailable"
+			if sourceID, _ := hwsensorsservice.SplitSensorUID(page.SensorUID); sourceID != hwsensorsservice.LocalSourceID {
+				render.messageValue = "Source unavailable"
+			} else {
+				render.messageValue = "HWiNFO unavailable"
+			}
 		}
 		return render, false
 	}

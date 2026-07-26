@@ -67,6 +67,28 @@ func (c *GRPCClient) ReadingsForSensorID(id string) ([]Reading, error) {
 	return readings, nil
 }
 
+// Sources implementation
+func (c *GRPCClient) Sources() ([]Source, error) {
+	stream, err := c.Client.Sources(context.Background(), &empty.Empty{})
+	if err != nil {
+		return nil, err
+	}
+
+	var sources []Source
+	for {
+		s, err := stream.Recv()
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		sources = append(sources, &source{s})
+	}
+
+	return sources, nil
+}
+
 // GRPCServer is the gRPC server that GRPCClient talks to.
 type GRPCServer struct {
 	// This is the real implementation
@@ -89,8 +111,30 @@ func (s *GRPCServer) Sensors(_ *empty.Empty, stream proto.HWService_SensorsServe
 
 	for _, sensor := range sensors {
 		if err := stream.Send(&proto.Sensor{
-			ID:   sensor.ID(),
-			Name: sensor.Name(),
+			ID:       sensor.ID(),
+			Name:     sensor.Name(),
+			SourceID: sensor.SourceID(),
+		}); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// Sources gRPC wrapper
+func (s *GRPCServer) Sources(_ *empty.Empty, stream proto.HWService_SourcesServer) error {
+	sources, err := s.Impl.Sources()
+	if err != nil {
+		return err
+	}
+
+	for _, src := range sources {
+		if err := stream.Send(&proto.Source{
+			ID:        src.ID(),
+			Name:      src.Name(),
+			PollTime:  src.PollTime(),
+			Available: src.Available(),
 		}); err != nil {
 			return err
 		}

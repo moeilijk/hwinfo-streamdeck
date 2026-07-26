@@ -18,12 +18,16 @@ import (
 // Sensor element (e.g. motherboard, cpu, gpu...)
 type Sensor struct {
 	cs C.PHWiNFO_SENSORS_SENSOR_ELEMENT
+	// data is the raw element, sized by dwSizeOfSensorElement; its length
+	// decides whether the v2 UTF-8 fields are present.
+	data []byte
 }
 
 // NewSensor constructs a Sensor
 func NewSensor(data []byte) Sensor {
 	return Sensor{
-		cs: C.PHWiNFO_SENSORS_SENSOR_ELEMENT(unsafe.Pointer(&data[0])),
+		cs:   C.PHWiNFO_SENSORS_SENSOR_ELEMENT(unsafe.Pointer(&data[0])),
+		data: data,
 	}
 }
 
@@ -51,4 +55,9 @@ func (s *Sensor) NameOrig() string {
 // NameUser sensor name displayed, which might have been renamed by user
 func (s *Sensor) NameUser() string {
 	return util.DecodeCharPtr(unsafe.Pointer(&s.cs.szSensorNameUser), C.HWiNFO_SENSORS_STRING_LEN2)
+}
+
+// UTFNameUser is the v2 UTF-8 user sensor name; empty on v1 shared memory
+func (s *Sensor) UTFNameUser() string {
+	return util.CString(utfField(s.data, offSensorUTFNameUser, stringLen2))
 }

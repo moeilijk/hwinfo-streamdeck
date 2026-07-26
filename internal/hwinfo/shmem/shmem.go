@@ -19,7 +19,12 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-var buf = make([]byte, 200000)
+// LocalMappingName is the file mapping of the local machine's sensors.
+const LocalMappingName = C.HWiNFO_SENSORS_MAP_FILE_NAME2
+
+// RemoteMappingPrefix + a 0-based index names the mapping of a remote
+// machine monitored by HWiNFO (October 2023 shared-memory definitions).
+const RemoteMappingPrefix = C.HWiNFO_SENSORS_MAP_FILE_NAME2_REMOTE
 
 func copyBytes(addr uintptr) []byte {
 	headerLen := C.sizeof_HWiNFO_SENSORS_SHARED_MEM2
@@ -33,26 +38,31 @@ func copyBytes(addr uintptr) []byte {
 	cheader := C.PHWiNFO_SENSORS_SHARED_MEM2(unsafe.Pointer(&d[0]))
 	fullLen := int(cheader.dwOffsetOfReadingSection + (cheader.dwSizeOfReadingElement * cheader.dwNumReadingElements))
 
-	if fullLen > cap(buf) {
-		buf = append(buf, make([]byte, fullLen-cap(buf))...)
-	}
-
 	dh.Len, dh.Cap = fullLen, fullLen
 
+	// Each source gets its own copy; the mapped view is unmapped right after.
+	buf := make([]byte, fullLen)
 	copy(buf, d)
 
-	return buf[:fullLen]
+	return buf
 }
 
-// ReadBytes copies bytes from global shared memory
+// ReadBytes copies bytes from the local global shared memory
 func ReadBytes() ([]byte, error) {
+	return ReadBytesNamed(LocalMappingName)
+}
+
+// ReadBytesNamed copies bytes from the named shared-memory mapping. A
+// mapping that does not exist (remote machine not connected) returns
+// util.ErrFileNotFound.
+func ReadBytesNamed(name string) ([]byte, error) {
 	err := mutex.Lock()
 	defer mutex.Unlock()
 	if err != nil {
 		return nil, err
 	}
 
-	hnd, err := openFileMapping()
+	hnd, err := openFileMapping(name)
 	if err != nil {
 		return nil, err
 	}
@@ -66,8 +76,8 @@ func ReadBytes() ([]byte, error) {
 	return copyBytes(addr), nil
 }
 
-func openFileMapping() (C.HANDLE, error) {
-	lpName := C.CString(C.HWiNFO_SENSORS_MAP_FILE_NAME2)
+func openFileMapping(name string) (C.HANDLE, error) {
+	lpName := C.CString(name)
 	defer C.free(unsafe.Pointer(lpName))
 
 	hnd := C.OpenFileMapping(syscall.FILE_MAP_READ, 0, lpName)

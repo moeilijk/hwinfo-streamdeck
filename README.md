@@ -73,6 +73,18 @@ Press the key while an alert is active to step through the snooze presets: **5m*
 
 The Settings action provides plugin-wide configuration: the polling rate (250 ms to 10 s), the appearance of the settings tile itself, and the global threshold library. The tile shows the current polling interval, and its Property Inspector shows the live HWiNFO connection status.
 
+### Remote machine sensors
+
+When HWiNFO itself monitors remote machines (its remote sensor connection, HWiNFO v7.33 or later), those machines appear as extra sources in the plugin. A **Source** selector shows up in the sensor pickers as soon as more than one source is present; it filters the sensor list, and every action (keys and dials) can use remote readings exactly like local ones. The shared memory does not expose remote machine names, so sources are numbered (**Remote 1**, **Remote 2**, ...) in connection order. A tile whose remote source disconnects shows an unavailable state instead of freezing on its last value, and recovers automatically when the machine reconnects. Note that the free version of HWiNFO limits remote monitoring to 12 hours of continuous runtime, just like Shared Memory Support.
+
+Connecting a remote machine happens entirely in HWiNFO; there is nothing to configure in the plugin:
+
+1. On the remote machine, run HWiNFO with its Sensor Status window open (minimized is fine). Click the **Network** icon at the bottom of that window ("Manage Network Connections for Remote Monitoring") to open the **Remote Center**, enable **Server Role**, and allow the connection if Windows Firewall asks.
+2. On this machine, open the same Remote Center, find the remote machine with **Enumerate Network** (or enter its IP address), and click **Connect**.
+3. The remote sensors now appear in your local HWiNFO sensor list, and the **Source** selector appears in the plugin's sensor pickers.
+
+For the original documentation of this HWiNFO feature, see the [remote monitoring explanation on the HWiNFO forum](https://www.hwinfo.com/forum/threads/how-does-the-remote-monitor-works.7156/).
+
 ## Enabling Support in HWiNFO64
 
 > If the "portable" version of HWiNFO64 gives trouble with this plugin, use the installer version.
