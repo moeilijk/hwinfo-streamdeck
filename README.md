@@ -93,7 +93,7 @@ The Settings action provides plugin-wide configuration: the polling rate (250 ms
 
     ![alt text](images/sharedmemory.png "HWiNFO64 Settings")
 
-5. Click "OK" then, "Run"
+5. Click "OK" then, "Start"
 
 ## Install and Setup the Plugin
 
