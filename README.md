@@ -44,11 +44,7 @@ All sensor pickers support search, category filtering, and favorites shared acro
 
     ![alt text](images/sharedmemory.png "HWiNFO64 Settings")
 
-5. (Optional) Recommended launch settings
-
-    ![alt text](images/recommendedsettings.png "Recommended settings")
-
-6. Click "OK" then, "Run"
+5. Click "OK" then, "Run"
 
 ## Install and Setup the Plugin
 
