@@ -100,7 +100,7 @@
 	"Icon": "pluginIcon",
 	"CategoryIcon": "categoryIcon",
 	"URL": "https://github.com/moeilijk/hwinfo-streamdeck",
-	"Version": "3.0.0.0",
+	"Version": "3.1.0.0",
 	"ApplicationsToMonitor": {
 		"windows": [
 			"HWiNFO64.EXE",
