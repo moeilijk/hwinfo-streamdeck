@@ -83,7 +83,7 @@ Connecting a remote machine happens entirely in HWiNFO; there is nothing to conf
 2. On this machine, open the same Remote Center, find the remote machine with **Enumerate Network** (or enter its IP address), and click **Connect**.
 3. The remote sensors now appear in your local HWiNFO sensor list, and the **Source** selector appears in the plugin's sensor pickers.
 
-Remote monitoring is a HWiNFO feature; its official documentation is the "Remote Monitoring" section of the HWiNFO manual that ships with the program (HWiNFO publishes no separate online manual).
+Remote monitoring is a HWiNFO feature; its official documentation is the "Remote Sensor Monitoring" chapter of `HWiNFO Manual.pdf`, found in the HWiNFO installation folder (typically `C:\Program Files\HWiNFO64`). HWiNFO publishes no separate online manual.
 
 ## Enabling Support in HWiNFO64
 
