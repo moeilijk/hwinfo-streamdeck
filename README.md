@@ -79,7 +79,7 @@ All sensor pickers support search, category filtering, and favorites shared acro
 
 ## Building from source
 
-Requires Go, and for the HWiNFO shared-memory bridge a Windows C toolchain (on Linux/WSL: `mingw-w64`).
+Requires Go and a Windows C toolchain for the HWiNFO shared-memory bridge.
 
 ```sh
 make plugin   # builds hwinfo.exe and hwinfo-bridge.exe into the .sdPlugin folder
@@ -91,9 +91,7 @@ make release  # packs build/com.moeilijk.hwinfo-X.Y.Z.streamDeckPlugin
 
 The Stream Deck plugin (`hwinfo.exe`) talks to a sensor bridge (`hwinfo-bridge.exe`) over gRPC
 ([hashicorp/go-plugin](https://github.com/hashicorp/go-plugin)); the bridge reads the HWiNFO shared memory.
-For development without Windows/HWiNFO there is `cmd/mock-bridge`: the same gRPC interface with controllable
-mock sensors (HTTP control API on `:9999`), used by the integration suites in `tests/integration/`
-(`scripts/run-integration-tests.sh`, runs against a [DeckBridge](https://github.com/moeilijk/DeckBridge) emulator on Linux/WSL).
+`cmd/mock-bridge` provides controllable mock sensors for the automated integration tests in `tests/integration/`.
 
 ## History and credits
 
