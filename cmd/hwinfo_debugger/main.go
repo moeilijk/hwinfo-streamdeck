@@ -15,7 +15,7 @@ var info = flag.String("info", "", "A stringified json containing the Stream Dec
 
 func main() {
 	appdata := os.Getenv("APPDATA")
-	logpath := filepath.Join(appdata, "Elgato/StreamDeck/Plugins/com.exension.hwinfo.sdPlugin/hwinfo.log")
+	logpath := filepath.Join(appdata, "Elgato/StreamDeck/Plugins/com.moeilijk.hwinfo.sdPlugin/hwinfo.log")
 	f, err := os.OpenFile(logpath, os.O_RDWR|os.O_CREATE, 0666)
 	f.Truncate(0)
 	if err != nil {

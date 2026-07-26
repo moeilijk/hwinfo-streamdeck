@@ -119,13 +119,13 @@ async function createSlot(piPort, keyIndex, actionId) {
   // POST /api/slots returns full state object; find the new slot by keyIndex
   const state = await httpPost(piPort, '/api/slots', {
     keyIndex,
-    pluginId: 'com.exension.hwinfo',
+    pluginId: 'com.moeilijk.hwinfo',
     actionId,
   });
   if (!state || !Array.isArray(state.slots)) {
     throw new Error('createSlot: unexpected response: ' + JSON.stringify(state).slice(0, 200));
   }
-  const slot = state.slots.find(s => s.keyIndex === keyIndex && s.pluginId === 'com.exension.hwinfo' && s.actionId === actionId);
+  const slot = state.slots.find(s => s.keyIndex === keyIndex && s.pluginId === 'com.moeilijk.hwinfo' && s.actionId === actionId);
   if (!slot || !slot.context) {
     throw new Error(`createSlot: slot for keyIndex=${keyIndex} not found in state`);
   }
@@ -172,7 +172,7 @@ function mockReset() {
 
 // ── DeckBridge profile + global settings readers ─────────────────────────────
 const PROFILE_PATH = `${process.env.HOME}/.config/DeckBridge/profiles/default.json`;
-const GLOBAL_SETTINGS_PATH = `${process.env.HOME}/.config/DeckBridge/settings/com.exension.hwinfo.json`;
+const GLOBAL_SETTINGS_PATH = `${process.env.HOME}/.config/DeckBridge/settings/com.moeilijk.hwinfo.json`;
 
 function readGlobalSettings() {
   try { return JSON.parse(fs.readFileSync(GLOBAL_SETTINGS_PATH, 'utf8')); } catch (_) { return {}; }

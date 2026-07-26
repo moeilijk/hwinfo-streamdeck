@@ -2,7 +2,7 @@
 set -euo pipefail
 
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-plugin_dir="$root_dir/com.exension.hwinfo.sdPlugin"
+plugin_dir="$root_dir/com.moeilijk.hwinfo.sdPlugin"
 
 win_user="${WIN_USER:-}"
 if [[ -z "$win_user" ]]; then
@@ -13,8 +13,8 @@ if [[ -z "$win_user" ]]; then
   exit 1
 fi
 
-win_plugin_dir="/mnt/c/Users/$win_user/AppData/Roaming/Elgato/StreamDeck/Plugins/com.exension.hwinfo.sdPlugin"
-if [[ "$win_plugin_dir" != /mnt/c/Users/*/AppData/Roaming/Elgato/StreamDeck/Plugins/com.exension.hwinfo.sdPlugin ]]; then
+win_plugin_dir="/mnt/c/Users/$win_user/AppData/Roaming/Elgato/StreamDeck/Plugins/com.moeilijk.hwinfo.sdPlugin"
+if [[ "$win_plugin_dir" != /mnt/c/Users/*/AppData/Roaming/Elgato/StreamDeck/Plugins/com.moeilijk.hwinfo.sdPlugin ]]; then
   echo "Unsafe target path: $win_plugin_dir" >&2
   exit 1
 fi

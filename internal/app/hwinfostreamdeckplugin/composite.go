@@ -20,7 +20,7 @@ import (
 	"golang.org/x/image/math/fixed"
 )
 
-const compositeAction = "com.exension.hwinfo.composite"
+const compositeAction = "com.moeilijk.hwinfo.composite"
 
 const (
 	compositeModeText  = "text"

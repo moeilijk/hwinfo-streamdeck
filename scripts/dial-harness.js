@@ -13,7 +13,7 @@ const port = m ? parseInt(m[2], 10) : 8085
 const PORT = 38123
 const PLUGIN_UUID = 'harness-plugin'
 const DIAL_CTX = 'dial-ctx-0'
-const DIAL_ACTION = 'com.exension.hwinfo.dial'
+const DIAL_ACTION = 'com.moeilijk.hwinfo.dial'
 const DEVICE = 'harness-plus-0'
 
 const globalSettings = {

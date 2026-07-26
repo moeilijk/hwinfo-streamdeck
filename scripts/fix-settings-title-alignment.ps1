@@ -36,7 +36,7 @@ Get-ChildItem -LiteralPath $profilesRoot -Recurse -Filter manifest.json -File | 
                 if ($null -eq $action) {
                     continue
                 }
-                if ($action.UUID -ne "com.exension.hwinfo.settings") {
+                if ($action.UUID -ne "com.moeilijk.hwinfo.settings") {
                     continue
                 }
                 if ($null -eq $action.States) {

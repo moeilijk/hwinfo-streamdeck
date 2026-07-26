@@ -12,15 +12,15 @@ This plugin reads HWiNFO exclusively. For Libre Hardware Monitor, remote machine
 
 ## v3.0
 
-The plugin core has been replaced with the actively developed engine from the [lhm-streamdeck](https://github.com/moeilijk/lhm-streamdeck) sister project. Existing tiles from v2.0.5 keep working after upgrading; the reading action and its settings are fully backwards compatible.
+The plugin core has been replaced with the actively developed engine from the [lhm-streamdeck](https://github.com/moeilijk/lhm-streamdeck) sister project. v3 also has a new plugin identity (`com.moeilijk.hwinfo`): tiles configured with the original v2.0.5 plugin are not carried over. Uninstall the old "HWiNFO" plugin and set up your tiles again.
 
 ## Actions
 
-- **Sensor Reading** — one reading per key: graph and/or text, custom colors, fonts, number formats, unit normalization, EMA smoothing, and per-tile update intervals
-- **Composite Dashboard** — 2–4 readings on one key with overlaid graphs
-- **Derived Metric** — formulas (sum, average, max, min, delta, pct) across 2–8 readings, with savable presets
-- **Dial Carousel** — readings on the Stream Deck+ touch strip: rotate to cycle pages, multiple overview styles, page indicators
-- **Settings** — polling rate, default tile appearance, and a shared global threshold library
+- **Sensor Reading**: one reading per key with graph and/or text, custom colors, fonts, number formats, unit normalization, EMA smoothing, and per-tile update intervals
+- **Composite Dashboard**: 2–4 readings on one key with overlaid graphs
+- **Derived Metric**: formulas (sum, average, max, min, delta, pct) across 2–8 readings, with savable presets
+- **Dial Carousel**: readings on the Stream Deck+ touch strip, with rotate-to-cycle paging, multiple overview styles, and page indicators
+- **Settings**: polling rate, default tile appearance, and a shared global threshold library
 
 All sensor pickers support search, category filtering, and favorites shared across tiles. Thresholds (colors, alert text, hysteresis, dwell, cooldown, snooze, sticky alarms) can be defined per tile or globally by sensor type.
 
@@ -56,7 +56,7 @@ All sensor pickers support search, category filtering, and favorites shared acro
 
     [Plugin Releases](../../releases)
 
-    > When upgrading, first uninstall: within the Stream Deck app choose "More Actions..." (bottom-right), locate "HWiNFO" and choose "Uninstall". Your tiles and settings will be preserved.
+    > Upgrading from v2.0.5? First uninstall the old plugin: within the Stream Deck app choose "More Actions..." (bottom-right), locate "HWiNFO" and choose "Uninstall". v3 installs as a new plugin, so old tiles are not migrated and need to be configured again.
 
 2. Double-click to install the plugin
 
@@ -76,10 +76,10 @@ All sensor pickers support search, category filtering, and favorites shared acro
 
 ## Troubleshooting
 
-- **Tiles show "HWiNFO Unavailable" or "Please Launch HWiNFO64"** — HWiNFO is not running, is not in Sensors-only mode, or Shared Memory Support is off. Walk through the HWiNFO setup above; if the plugin doesn't recover immediately, quit and reopen HWiNFO64.
-- **Tiles stop updating after ~12 hours** — the free version of HWiNFO disables Shared Memory Support 12 hours after enabling it. Restart HWiNFO (or re-enable the setting) to continue; a HWiNFO Pro license removes the limit. This is HWiNFO policy, not something the plugin can work around.
-- **A tile shows no value after upgrading or after hardware changes** — the configured sensor may no longer exist under the same id. Open the tile's configuration and select the sensor and reading again.
-- **Reporting a bug** — the plugin writes a log to `%APPDATA%\Elgato\StreamDeck\Plugins\com.exension.hwinfo.sdPlugin\hwinfo.log`; the last lines are usually enough to pinpoint the problem. Please attach them to your issue.
+- **Tiles show "HWiNFO Unavailable" or "Please Launch HWiNFO64"**: HWiNFO is not running, is not in Sensors-only mode, or Shared Memory Support is off. Walk through the HWiNFO setup above; if the plugin doesn't recover immediately, quit and reopen HWiNFO64.
+- **Tiles stop updating after ~12 hours**: the free version of HWiNFO limits Shared Memory Support to 12 hours of continuous runtime. Restart HWiNFO (or re-enable the setting) to continue; a HWiNFO Pro license removes the limit. This is HWiNFO policy, not something the plugin can work around.
+- **A tile shows no value after upgrading or after hardware changes**: the configured sensor may no longer exist under the same id. Open the tile's configuration and select the sensor and reading again.
+- **Reporting a bug**: the plugin writes a log to `%APPDATA%\Elgato\StreamDeck\Plugins\com.moeilijk.hwinfo.sdPlugin\hwinfo.log`; the last lines are usually enough to pinpoint the problem. Please attach them to your issue.
 
 ## Building from source
 
@@ -88,7 +88,7 @@ Requires Go, and for the HWiNFO shared-memory bridge a Windows C toolchain (on L
 ```sh
 make plugin   # builds hwinfo.exe and hwinfo-bridge.exe into the .sdPlugin folder
 make verify   # builds all targets, runs Go + Property Inspector tests, validates the manifest
-make release  # packs build/com.exension.hwinfo.streamDeckPlugin
+make release  # packs build/com.moeilijk.hwinfo-X.Y.Z.streamDeckPlugin
 ```
 
 ### Architecture

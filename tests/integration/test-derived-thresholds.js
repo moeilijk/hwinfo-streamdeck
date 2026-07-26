@@ -12,9 +12,9 @@ const {
   getDerivedTileSettings, getTileSettings, readGlobalSettings,
 } = require('./helpers');
 
-const SETTINGS_ACTION = 'com.exension.hwinfo.settings';
-const DERIVED_ACTION  = 'com.exension.hwinfo.derived';
-const READING_ACTION  = 'com.exension.hwinfo.reading';
+const SETTINGS_ACTION = 'com.moeilijk.hwinfo.settings';
+const DERIVED_ACTION  = 'com.moeilijk.hwinfo.derived';
+const READING_ACTION  = 'com.moeilijk.hwinfo.reading';
 const POLL_MS         = 1000;
 const DWELL_MS        = 1000;
 const COOLDOWN_MS     = 5000;

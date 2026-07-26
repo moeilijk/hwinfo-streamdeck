@@ -30,9 +30,9 @@ function loadJsdom() {
 }
 
 const JSDOM = loadJsdom();
-const html = fs.readFileSync(path.join(repoRoot, "com.exension.hwinfo.sdPlugin/dial_pi.html"), "utf8");
-const piUtils = fs.readFileSync(path.join(repoRoot, "com.exension.hwinfo.sdPlugin/pi_utils.js"), "utf8");
-const dialPi = fs.readFileSync(path.join(repoRoot, "com.exension.hwinfo.sdPlugin/dial_pi.js"), "utf8");
+const html = fs.readFileSync(path.join(repoRoot, "com.moeilijk.hwinfo.sdPlugin/dial_pi.html"), "utf8");
+const piUtils = fs.readFileSync(path.join(repoRoot, "com.moeilijk.hwinfo.sdPlugin/pi_utils.js"), "utf8");
+const dialPi = fs.readFileSync(path.join(repoRoot, "com.moeilijk.hwinfo.sdPlugin/dial_pi.js"), "utf8");
 
 function bootPi() {
   const dom = new JSDOM(html, { runScripts: "dangerously", pretendToBeVisual: true });

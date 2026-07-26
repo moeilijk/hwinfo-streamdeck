@@ -1,4 +1,4 @@
-$manifest = "com.exension.hwinfo.sdPlugin/manifest.json"
+$manifest = "com.moeilijk.hwinfo.sdPlugin/manifest.json"
 $state = ".last_patch"
 $content = Get-Content -Raw $manifest
 $pattern = '"Version"\s*:\s*"(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)\.(?<build>\d+)"'

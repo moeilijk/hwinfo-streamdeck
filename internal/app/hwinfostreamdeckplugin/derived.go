@@ -11,7 +11,7 @@ import (
 	"github.com/moeilijk/hwinfo-streamdeck/pkg/streamdeck"
 )
 
-const derivedAction = "com.exension.hwinfo.derived"
+const derivedAction = "com.moeilijk.hwinfo.derived"
 
 // derivedState holds runtime state for one derived metric tile context.
 type derivedState struct {

@@ -19,7 +19,7 @@ const { noData } = require("./live-e2e-guard");
 
 const repoRoot = path.resolve(__dirname, "..");
 const BASE = process.env.DECKBRIDGE_URL || "http://127.0.0.1:34075";
-const PLUGIN_ID = "com.exension.hwinfo";
+const PLUGIN_ID = "com.moeilijk.hwinfo";
 const LABEL = "dial reverse live e2e";
 
 function loadDep(name) {
@@ -31,13 +31,13 @@ function loadDep(name) {
 
 const jsdomMod = loadDep("jsdom");
 const WebSocket = loadDep("ws");
-const piHtml = fs.readFileSync(path.join(repoRoot, "com.exension.hwinfo.sdPlugin/dial_pi.html"), "utf8");
-const piUtils = fs.readFileSync(path.join(repoRoot, "com.exension.hwinfo.sdPlugin/pi_utils.js"), "utf8");
-const dialPi = fs.readFileSync(path.join(repoRoot, "com.exension.hwinfo.sdPlugin/dial_pi.js"), "utf8");
+const piHtml = fs.readFileSync(path.join(repoRoot, "com.moeilijk.hwinfo.sdPlugin/dial_pi.html"), "utf8");
+const piUtils = fs.readFileSync(path.join(repoRoot, "com.moeilijk.hwinfo.sdPlugin/pi_utils.js"), "utf8");
+const dialPi = fs.readFileSync(path.join(repoRoot, "com.moeilijk.hwinfo.sdPlugin/dial_pi.js"), "utf8");
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const getState = async () => (await fetch(`${BASE}/api/state`)).json();
-const dialSlots = (s) => (s.slots || []).filter((x) => x && String(x.actionId || x.action || "") === "com.exension.hwinfo.dial");
+const dialSlots = (s) => (s.slots || []).filter((x) => x && String(x.actionId || x.action || "") === "com.moeilijk.hwinfo.dial");
 const slotByContext = async (ctx) => (await getState()).slots.find((s) => s.context === ctx);
 
 async function rotate(deviceId, dialIndex, ticks) {

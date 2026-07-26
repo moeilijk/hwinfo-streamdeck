@@ -10,7 +10,7 @@ const {
   mockReset, readGlobalSettings,
 } = require('./helpers');
 
-const SETTINGS_ACTION = 'com.exension.hwinfo.settings';
+const SETTINGS_ACTION = 'com.moeilijk.hwinfo.settings';
 const KEY_SETTINGS = 5;
 
 async function run() {

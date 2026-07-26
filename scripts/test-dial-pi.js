@@ -36,8 +36,8 @@ function loadDialSandbox(elementsById = {}) {
   sandbox.window = sandbox;
   sandbox.addEventListener = () => {};
   vm.createContext(sandbox);
-  vm.runInContext(fs.readFileSync("com.exension.hwinfo.sdPlugin/pi_utils.js", "utf8"), sandbox);
-  vm.runInContext(fs.readFileSync("com.exension.hwinfo.sdPlugin/dial_pi.js", "utf8"), sandbox);
+  vm.runInContext(fs.readFileSync("com.moeilijk.hwinfo.sdPlugin/pi_utils.js", "utf8"), sandbox);
+  vm.runInContext(fs.readFileSync("com.moeilijk.hwinfo.sdPlugin/dial_pi.js", "utf8"), sandbox);
   return sandbox;
 }
 
@@ -197,7 +197,7 @@ function testBulkAddCount() {
 // Phase 1 / #56 feedback item 2: the Up/Down/Delete actions sit directly under
 // the page list, above the Dial-press hint and the view options.
 function testActionsUnderPageList() {
-  const html = fs.readFileSync("com.exension.hwinfo.sdPlugin/dial_pi.html", "utf8");
+  const html = fs.readFileSync("com.moeilijk.hwinfo.sdPlugin/dial_pi.html", "utf8");
   const actions = html.indexOf('id="moveUpBtn"');
   const dialPress = html.indexOf("Dial press");
   const defaultView = html.indexOf('id="defaultView"');
@@ -268,7 +268,7 @@ function testAddPageButtonSendsSettings() {
     send(payload) { sent.push(JSON.parse(payload)); },
   };
   sb.uuid = "ctx";
-  sb.actionInfo = { action: "com.exension.hwinfo.dial" };
+  sb.actionInfo = { action: "com.moeilijk.hwinfo.dial" };
   sb.renderPages = () => {};
   sb.currentCatalog = { readings: [
     { id: 1, sensorUid: "cpu", label: "CPU Core #1", unit: "%" },
@@ -310,7 +310,7 @@ function testRemoveSelectedPage() {
 }
 
 function testBuildRefTraceableNotVisible() {
-  const html = fs.readFileSync("com.exension.hwinfo.sdPlugin/dial_pi.html", "utf8");
+  const html = fs.readFileSync("com.moeilijk.hwinfo.sdPlugin/dial_pi.html", "utf8");
   // The build ref is traceable as a comment but must NOT occupy a visible PI row.
   assert(!html.includes('id="pluginBuildRef"'), "build ref must not be a visible PI row");
   assert(/<!--[^>]*Build: 3c5e9b5 \+ V5-prep\.41/.test(html), "build ref present as a comment");
@@ -321,7 +321,7 @@ function testBuildRefTraceableNotVisible() {
 }
 
 function testBulkPreviewListUsesDarkPiSelectStyle() {
-  const html = fs.readFileSync("com.exension.hwinfo.sdPlugin/dial_pi.html", "utf8");
+  const html = fs.readFileSync("com.moeilijk.hwinfo.sdPlugin/dial_pi.html", "utf8");
   assert(html.includes("#pageList, #bulkPreviewList"), "bulk preview list shares dark list styling");
   assert(html.includes("#pageList option, #bulkPreviewList option"), "bulk preview options use dark option styling");
   assert(html.includes("#pageList option:checked, #bulkPreviewList option:checked"), "bulk preview selected option remains readable");

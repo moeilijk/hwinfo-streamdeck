@@ -24,7 +24,7 @@ func boolPtr(v bool) *bool {
 }
 
 func (p *Plugin) isSettingsAction(action, context string) bool {
-	if action == "com.exension.hwinfo.settings" {
+	if action == "com.moeilijk.hwinfo.settings" {
 		return true
 	}
 	p.mu.RLock()
@@ -100,7 +100,7 @@ func (p *Plugin) OnWillAppear(event *streamdeck.EvWillAppear) {
 	}
 
 	// Handle settings action separately
-	if event.Action == "com.exension.hwinfo.settings" {
+	if event.Action == "com.moeilijk.hwinfo.settings" {
 		// Decode tile appearance settings from payload
 		var tileSettings settingsTileSettings
 		hasShowLabel := false
@@ -289,7 +289,7 @@ func (p *Plugin) OnWillDisappear(event *streamdeck.EvWillDisappear) {
 	}
 
 	// Handle settings action
-	if event.Action == "com.exension.hwinfo.settings" {
+	if event.Action == "com.moeilijk.hwinfo.settings" {
 		p.mu.Lock()
 		delete(p.settingsContexts, event.Context)
 		p.mu.Unlock()
@@ -329,7 +329,7 @@ func (p *Plugin) OnWillDisappear(event *streamdeck.EvWillDisappear) {
 
 // OnKeyDown snoozes or resumes active threshold alerts for reading tiles.
 func (p *Plugin) OnKeyDown(event *streamdeck.EvKeyDown) {
-	if event.Action != "com.exension.hwinfo.reading" {
+	if event.Action != "com.moeilijk.hwinfo.reading" {
 		return
 	}
 
@@ -475,7 +475,7 @@ func (p *Plugin) OnPropertyInspectorConnected(event *streamdeck.EvSendToPlugin) 
 	}
 
 	if p.isSettingsAction(event.Action, event.Context) {
-		p.sendSettingsStatus("com.exension.hwinfo.settings", event.Context)
+		p.sendSettingsStatus("com.moeilijk.hwinfo.settings", event.Context)
 		return
 	}
 
@@ -585,13 +585,13 @@ func (p *Plugin) OnSendToPlugin(event *streamdeck.EvSendToPlugin) {
 		targetContext := p.resolveSettingsContext(event.Context)
 		// Check for settingsConnected
 		if _, ok := payload["settingsConnected"]; ok {
-			p.sendSettingsStatus("com.exension.hwinfo.settings", targetContext)
+			p.sendSettingsStatus("com.moeilijk.hwinfo.settings", targetContext)
 			return
 		}
 
 		// Check for periodic settings status refresh
 		if _, ok := payload["requestSettingsStatus"]; ok {
-			p.sendSettingsStatus("com.exension.hwinfo.settings", targetContext)
+			p.sendSettingsStatus("com.moeilijk.hwinfo.settings", targetContext)
 			return
 		}
 
@@ -673,7 +673,7 @@ func (p *Plugin) OnSendToPlugin(event *streamdeck.EvSendToPlugin) {
 					log.Printf("updateTileAppearance SetSettings failed: %v\n", err)
 				}
 				p.updateSettingsTile(targetContext)
-				p.sendSettingsStatus("com.exension.hwinfo.settings", targetContext)
+				p.sendSettingsStatus("com.moeilijk.hwinfo.settings", targetContext)
 			}
 			return
 		}
@@ -1018,7 +1018,7 @@ func (p *Plugin) OnDidReceiveSettings(event *streamdeck.EvDidReceiveSettings) {
 		}
 	}
 	p.updateSettingsTile(event.Context)
-	p.sendSettingsStatus("com.exension.hwinfo.settings", event.Context)
+	p.sendSettingsStatus("com.moeilijk.hwinfo.settings", event.Context)
 }
 
 // OnDidReceiveGlobalSettings handles global settings from Stream Deck

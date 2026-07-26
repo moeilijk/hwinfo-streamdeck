@@ -10,8 +10,8 @@ const {
   mockReset, readGlobalSettings,
 } = require('./helpers');
 
-const SETTINGS_ACTION = 'com.exension.hwinfo.settings';
-const READING_ACTION  = 'com.exension.hwinfo.reading';
+const SETTINGS_ACTION = 'com.moeilijk.hwinfo.settings';
+const READING_ACTION  = 'com.moeilijk.hwinfo.reading';
 const KEY_SETTINGS = 8;  // settings tile for favorite removal
 const KEY_TILE_A   = 6;  // tile we save the favorite from
 const KEY_TILE_B   = 7;  // tile we apply the favorite to

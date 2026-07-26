@@ -464,7 +464,7 @@ func (p *Plugin) getCachedDivisor(context, raw string) (float64, error) {
 }
 
 func (p *Plugin) updateTiles(data *actionData) {
-	if data.action != "com.exension.hwinfo.reading" {
+	if data.action != "com.moeilijk.hwinfo.reading" {
 		log.Printf("Unknown action updateTiles: %s\n", data.action)
 		return
 	}
@@ -480,7 +480,7 @@ func (p *Plugin) updateTiles(data *actionData) {
 	showUnavailable := func() {
 		if !data.settings.InErrorState {
 			payload := evStatus{Error: true, Message: "HWiNFO Unavailable"}
-			err := p.sd.SendToPropertyInspector("com.exension.hwinfo.reading", data.context, payload)
+			err := p.sd.SendToPropertyInspector("com.moeilijk.hwinfo.reading", data.context, payload)
 			if err != nil {
 				log.Println("updateTiles SendToPropertyInspector", err)
 			}
@@ -503,7 +503,7 @@ func (p *Plugin) updateTiles(data *actionData) {
 	// show ui on property inspector if in error state
 	if data.settings.InErrorState {
 		payload := evStatus{Error: false, Message: "show_ui"}
-		err := p.sd.SendToPropertyInspector("com.exension.hwinfo.reading", data.context, payload)
+		err := p.sd.SendToPropertyInspector("com.moeilijk.hwinfo.reading", data.context, payload)
 		if err != nil {
 			log.Println("updateTiles SendToPropertyInspector", err)
 		}

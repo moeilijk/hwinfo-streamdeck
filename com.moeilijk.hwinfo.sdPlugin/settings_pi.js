@@ -1,7 +1,7 @@
 // Settings Property Inspector for the HWiNFO settings tile
 var websocket = null,
   uuid = null,
-  action = "com.exension.hwinfo.settings",
+  action = "com.moeilijk.hwinfo.settings",
   actionInfo = {},
   inInfo = {},
   context = null,
@@ -159,7 +159,7 @@ function connectElgatoStreamDeckSocket(inPort, inUUID, inRegisterEvent, inInfo, 
       context = qs.get("context");
     }
     if (!action) {
-      action = qs.get("action") || "com.exension.hwinfo.settings";
+      action = qs.get("action") || "com.moeilijk.hwinfo.settings";
     }
   } catch (_err) {
     // Ignore URL parsing errors in constrained PI runtimes.

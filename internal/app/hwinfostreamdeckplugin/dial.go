@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	dialAction = "com.exension.hwinfo.dial"
+	dialAction = "com.moeilijk.hwinfo.dial"
 	dialWidth  = 200
 	dialHeight = 100
 )

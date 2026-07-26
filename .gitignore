@@ -38,6 +38,7 @@ cmd/hwinfostreamdeckplugin/debug
 # build artifacts
 build/*.streamDeckPlugin
 build/*.sdPlugin
+build/marketplace-assets/
 
 # local build version tracking
 .last_patch
@@ -67,9 +68,8 @@ mockup_output/
 example.json
 
 # Plugin Linux binaries (built by deploy-deckbridge.sh)
-com.exension.hwinfo.sdPlugin/hwinfo
-com.exension.hwinfo.sdPlugin/lhm-bridge
-com.exension.hwinfo.sdPlugin/hwinfo.log
+com.moeilijk.hwinfo.sdPlugin/hwinfo
+com.moeilijk.hwinfo.sdPlugin/hwinfo.log
 
 # Mock sensor server binary (built to repo root by go build)
 /mock-sensor-server
@@ -77,5 +77,7 @@ com.exension.hwinfo.sdPlugin/hwinfo.log
 # local build artifacts
 /mock-bridge
 /hwinfo
-com.exension.hwinfo.sdPlugin/hwinfo
-com.exension.hwinfo.sdPlugin/mock-bridge
+com.moeilijk.hwinfo.sdPlugin/mock-bridge
+
+# Downloaded SHM definitions (HWiNFO forum, account required)
+assets/

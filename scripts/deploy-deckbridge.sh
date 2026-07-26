@@ -7,8 +7,8 @@
 set -euo pipefail
 
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-plugin_src="$root_dir/com.exension.hwinfo.sdPlugin"
-plugin_dst="$HOME/.config/DeckBridge/plugins/com.exension.hwinfo.sdPlugin"
+plugin_src="$root_dir/com.moeilijk.hwinfo.sdPlugin"
+plugin_dst="$HOME/.config/DeckBridge/plugins/com.moeilijk.hwinfo.sdPlugin"
 deckbridge_dir="$HOME/projects/GitHub/DeckBridge"
 log_file="/tmp/deckbridge.log"
 

@@ -5,22 +5,22 @@ root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$root_dir"
 
 echo "check: settings_pi.js syntax"
-node --check com.exension.hwinfo.sdPlugin/settings_pi.js
+node --check com.moeilijk.hwinfo.sdPlugin/settings_pi.js
 
 echo "check: pi_utils.js syntax"
-node --check com.exension.hwinfo.sdPlugin/pi_utils.js
+node --check com.moeilijk.hwinfo.sdPlugin/pi_utils.js
 
 echo "check: index_pi.js syntax"
-node --check com.exension.hwinfo.sdPlugin/index_pi.js
+node --check com.moeilijk.hwinfo.sdPlugin/index_pi.js
 
 echo "check: composite_pi.js syntax"
-node --check com.exension.hwinfo.sdPlugin/composite_pi.js
+node --check com.moeilijk.hwinfo.sdPlugin/composite_pi.js
 
 echo "check: derived_pi.js syntax"
-node --check com.exension.hwinfo.sdPlugin/derived_pi.js
+node --check com.moeilijk.hwinfo.sdPlugin/derived_pi.js
 
 echo "check: dial_pi.js syntax"
-node --check com.exension.hwinfo.sdPlugin/dial_pi.js
+node --check com.moeilijk.hwinfo.sdPlugin/dial_pi.js
 
 echo "test: settings PI functional script"
 node scripts/test-settings-pi.js

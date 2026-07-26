@@ -6,7 +6,7 @@ import pathlib
 import re
 import sys
 
-path = pathlib.Path("com.exension.hwinfo.sdPlugin/manifest.json")
+path = pathlib.Path("com.moeilijk.hwinfo.sdPlugin/manifest.json")
 state_path = pathlib.Path(".last_patch")
 text = path.read_text()
 pattern = r'"Version"\s*:\s*"(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)\.(?P<build>\d+)"'

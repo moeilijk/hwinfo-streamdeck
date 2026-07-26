@@ -17,7 +17,7 @@ const path = require("path");
 const assert = require("assert");
 
 const repoRoot = path.resolve(__dirname, "..");
-const sdpiDir = path.join(repoRoot, "com.exension.hwinfo.sdPlugin");
+const sdpiDir = path.join(repoRoot, "com.moeilijk.hwinfo.sdPlugin");
 
 function loadJsdom() {
   for (const c of ["jsdom", path.resolve(repoRoot, "node_modules/jsdom"), path.resolve(repoRoot, "../DeckBridge/node_modules/jsdom")]) {

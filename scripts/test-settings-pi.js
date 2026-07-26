@@ -105,7 +105,7 @@ function loadSandbox(opts = {}) {
   sandbox.window = sandbox;
 
   vm.createContext(sandbox);
-  vm.runInContext(fs.readFileSync("com.exension.hwinfo.sdPlugin/settings_pi.js", "utf8"), sandbox);
+  vm.runInContext(fs.readFileSync("com.moeilijk.hwinfo.sdPlugin/settings_pi.js", "utf8"), sandbox);
 
   sandbox.websocket = {
     readyState: 1,
@@ -172,7 +172,7 @@ function testDidReceiveSettingsAppliesUi() {
   };
   const { sandbox, elements } = loadSandbox({ mockSocket: ws });
   sandbox.connectElgatoStreamDeckSocket("12345", "uuid-x", "registerPropertyInspector", "{}", JSON.stringify({
-    action: "com.exension.hwinfo.settings",
+    action: "com.moeilijk.hwinfo.settings",
     context: "ctx-x",
   }));
   ws.onmessage({
@@ -221,7 +221,7 @@ function testPollingFallbackSave() {
     return ws;
   };
   sandbox.connectElgatoStreamDeckSocket("12345", "uuid-x", "registerPropertyInspector", "{}", JSON.stringify({
-    action: "com.exension.hwinfo.settings",
+    action: "com.moeilijk.hwinfo.settings",
     context: "ctx-settings",
   }));
   ws.onopen();
@@ -252,7 +252,7 @@ function testStatusHeartbeatIsLightweight() {
     return ws;
   };
   sandbox.connectElgatoStreamDeckSocket("12345", "uuid-x", "registerPropertyInspector", "{}", JSON.stringify({
-    action: "com.exension.hwinfo.settings",
+    action: "com.moeilijk.hwinfo.settings",
     context: "ctx-settings",
   }));
   ws.onopen();

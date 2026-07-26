@@ -13,8 +13,8 @@ const {
   getCompositeTileSettings,
 } = require('./helpers');
 
-const SETTINGS_ACTION  = 'com.exension.hwinfo.settings';
-const COMPOSITE_ACTION = 'com.exension.hwinfo.composite';
+const SETTINGS_ACTION  = 'com.moeilijk.hwinfo.settings';
+const COMPOSITE_ACTION = 'com.moeilijk.hwinfo.composite';
 const POLL_MS          = 1000;
 const DWELL_MS         = 1000;
 const COOLDOWN_MS      = 5000;

@@ -124,7 +124,7 @@ function loadSandbox() {
     websocket: null,
     uuid: "ctx-reading",
     actionInfo: {
-      action: "com.exension.hwinfo.reading",
+      action: "com.moeilijk.hwinfo.reading",
     },
     Event: function Event(type) {
       this.type = type;
@@ -134,11 +134,11 @@ function loadSandbox() {
   sandbox.addEventListener = () => {};
 
   vm.createContext(sandbox);
-  vm.runInContext(fs.readFileSync("com.exension.hwinfo.sdPlugin/index_pi.js", "utf8"), sandbox);
+  vm.runInContext(fs.readFileSync("com.moeilijk.hwinfo.sdPlugin/index_pi.js", "utf8"), sandbox);
 
   sandbox.uuid = "ctx-reading";
   sandbox.actionInfo = {
-    action: "com.exension.hwinfo.reading",
+    action: "com.moeilijk.hwinfo.reading",
   };
   sandbox.websocket = {
     readyState: 1,
@@ -193,7 +193,7 @@ function loadScriptSandbox(scriptPath, extra = {}) {
     websocket: null,
     uuid: "ctx-reading",
     actionInfo: {
-      action: "com.exension.hwinfo.reading",
+      action: "com.moeilijk.hwinfo.reading",
     },
     Event: function Event(type) {
       this.type = type;
@@ -203,7 +203,7 @@ function loadScriptSandbox(scriptPath, extra = {}) {
   sandbox.addEventListener = () => {};
 
   vm.createContext(sandbox);
-  vm.runInContext(fs.readFileSync("com.exension.hwinfo.sdPlugin/pi_utils.js", "utf8"), sandbox);
+  vm.runInContext(fs.readFileSync("com.moeilijk.hwinfo.sdPlugin/pi_utils.js", "utf8"), sandbox);
   vm.runInContext(fs.readFileSync(scriptPath, "utf8"), sandbox);
   return sandbox;
 }
@@ -261,7 +261,7 @@ function testBindSnoozeControlsSendsPayload() {
   assert(sent.length >= 1, "expected snooze control change to send a plugin message");
   const msg = sent[sent.length - 1];
   assert(msg.event === "sendToPlugin", "expected sendToPlugin event");
-  assert(msg.action === "com.exension.hwinfo.reading", "unexpected action in plugin payload");
+  assert(msg.action === "com.moeilijk.hwinfo.reading", "unexpected action in plugin payload");
   assert(msg.context === "ctx-reading", "unexpected context in plugin payload");
   assert(msg.payload && msg.payload.sdpi_collection, "missing sdpi_collection payload");
   assert(msg.payload.sdpi_collection.key === "snoozeDurations", "unexpected payload key");
@@ -274,7 +274,7 @@ function testBindSnoozeControlsSendsPayload() {
 
 function testIndexReadingSortGroupsByPrefixAndNaturalLabel() {
   const select = new FakeSelect();
-  const sandbox = loadScriptSandbox("com.exension.hwinfo.sdPlugin/index_pi.js", {
+  const sandbox = loadScriptSandbox("com.moeilijk.hwinfo.sdPlugin/index_pi.js", {
     querySelectors: {
       "#graphUnitContainer": new FakeElement({ style: {} }),
     },
@@ -298,7 +298,7 @@ function testIndexReadingSortGroupsByPrefixAndNaturalLabel() {
 
 function testCompositeReadingSortUsesNaturalLabelOrder() {
   const select = new FakeSelect();
-  const sandbox = loadScriptSandbox("com.exension.hwinfo.sdPlugin/composite_pi.js", {
+  const sandbox = loadScriptSandbox("com.moeilijk.hwinfo.sdPlugin/composite_pi.js", {
     elementsById: {
       slot0_readingSelect: select,
     },
@@ -323,7 +323,7 @@ function testCompositeReadingSortUsesNaturalLabelOrder() {
 
 function testDerivedReadingSortUsesNaturalLabelOrder() {
   const select = new FakeSelect();
-  const sandbox = loadScriptSandbox("com.exension.hwinfo.sdPlugin/derived_pi.js", {
+  const sandbox = loadScriptSandbox("com.moeilijk.hwinfo.sdPlugin/derived_pi.js", {
     elementsById: {
       slot0_readingSelect: select,
     },
@@ -351,7 +351,7 @@ function testCompositeApplySettingsClearsStaleBoundsAndKeepsZero() {
   const slot0Max = new FakeElement({ value: "stale" });
   const slot1Min = new FakeElement({ value: "stale" });
   const slot1Max = new FakeElement({ value: "stale" });
-  const sandbox = loadScriptSandbox("com.exension.hwinfo.sdPlugin/composite_pi.js", {
+  const sandbox = loadScriptSandbox("com.moeilijk.hwinfo.sdPlugin/composite_pi.js", {
     elementsById: {
       slot0_min: slot0Min,
       slot0_max: slot0Max,
@@ -374,7 +374,7 @@ function testCompositeApplySettingsClearsStaleBoundsAndKeepsZero() {
 function testDerivedApplySettingsClearsStaleBoundsAndKeepsZero() {
   const derivedMin = new FakeElement({ value: "stale" });
   const derivedMax = new FakeElement({ value: "stale" });
-  const sandbox = loadScriptSandbox("com.exension.hwinfo.sdPlugin/derived_pi.js", {
+  const sandbox = loadScriptSandbox("com.moeilijk.hwinfo.sdPlugin/derived_pi.js", {
     elementsById: {
       derived_min: derivedMin,
       derived_max: derivedMax,
