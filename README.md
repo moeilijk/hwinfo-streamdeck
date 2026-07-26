@@ -146,6 +146,8 @@ The Stream Deck plugin (`hwinfo.exe`) talks to a sensor bridge (`hwinfo-bridge.e
 
 This plugin was created by [Shayne Sweeney](https://github.com/shayne), who built it as a closed-source passion project, open-sourced it once HWiNFO opened up the shared memory interface, and maintained it through v2.0.5. In 2026 he handed the project over to me ([moeilijk](https://github.com/moeilijk)). Thanks, Shayne.
 
+Portions of this implementation and README were drafted with AI assistance and reviewed before release.
+
 ## License
 
 [GPL-3.0](LICENSE). The plugin was created by Shayne Sweeney and was originally unlicensed; he gave me permission to place it under GPL-3.0 when I took over maintenance in 2026.
