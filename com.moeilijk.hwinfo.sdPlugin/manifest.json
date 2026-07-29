@@ -23,7 +23,7 @@
 		},
 		{
 			"Icon": "actionIcon_composite",
-			"Name": "HWiNFO Composite Dashboard",
+			"Name": "Composite Dashboard",
 			"States": [
 				{
 					"Image": "defaultImage",
@@ -37,7 +37,7 @@
 		},
 		{
 			"Icon": "actionIcon_derived",
-			"Name": "HWiNFO Derived Metric",
+			"Name": "Derived Metric",
 			"States": [
 				{
 					"Image": "defaultImage",
@@ -51,7 +51,7 @@
 		},
 		{
 			"Icon": "actionIcon",
-			"Name": "HWiNFO Dial Carousel",
+			"Name": "Dial Carousel",
 			"Controllers": [
 				"Encoder"
 			],
@@ -74,7 +74,7 @@
 		},
 		{
 			"Icon": "actionIcon_gear_white",
-			"Name": "HWiNFO Settings",
+			"Name": "Settings",
 			"States": [
 				{
 					"Image": "settingsImage",
@@ -100,7 +100,7 @@
 	"Icon": "pluginIcon",
 	"CategoryIcon": "categoryIcon",
 	"URL": "https://github.com/moeilijk/hwinfo-streamdeck",
-	"Version": "3.1.0.0",
+	"Version": "3.1.1.0",
 	"ApplicationsToMonitor": {
 		"windows": [
 			"HWiNFO64.EXE",
