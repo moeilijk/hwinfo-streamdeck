@@ -2,7 +2,7 @@ module github.com/moeilijk/hwinfo-streamdeck
 
 go 1.25.0
 
-toolchain go1.26.5
+toolchain go1.26.6
 
 require (
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0
