@@ -58,6 +58,15 @@ release: verify plugin
 	@VER=$$(python3 scripts/manifest-version.py); \
 	mv build/com.moeilijk.hwinfo.streamDeckPlugin "build/com.moeilijk.hwinfo-$$VER.streamDeckPlugin"; \
 	echo "artifact: build/com.moeilijk.hwinfo-$$VER.streamDeckPlugin"
+	$(MAKE) av-check
+
+# Antivirus check of the packed artifact (issue #116): the Microsoft Defender
+# engine with current definitions runs offline under wine64 and is the hard
+# gate; VirusTotal, MetaDefender and OpenTIP run when their API keys are set.
+# AV_CHECK_FLAGS: --upload (submit unknown files), --offline, --update.
+AV_CHECK_FLAGS?=
+av-check:
+	bash scripts/av-check.sh $(AV_CHECK_FLAGS)
 
 # Version bumps are explicit. Commit/release paths must not mutate manifest.json.
 bump-version:

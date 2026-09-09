@@ -39,6 +39,7 @@ cmd/hwinfostreamdeckplugin/debug
 build/*.streamDeckPlugin
 build/*.sdPlugin
 build/marketplace-assets/
+build/av-reports/
 
 # local build version tracking
 .last_patch
@@ -81,3 +82,4 @@ com.moeilijk.hwinfo.sdPlugin/mock-bridge
 
 # Downloaded SHM definitions (HWiNFO forum, account required)
 assets/
+.claude/settings.local.json
