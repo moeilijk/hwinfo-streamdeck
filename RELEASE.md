@@ -57,7 +57,7 @@ The check scans the `.streamDeckPlugin` package and the `hwinfo.exe` and `hwinfo
 - VirusTotal hash lookup (`scripts/virustotal-file.js`) when `VIRUSTOTAL_APIKEY` is set; `AV_CHECK_FLAGS=--reanalyze` asks VirusTotal to rescan an already known file with the current engines.
 - OPSWAT MetaDefender Cloud and Kaspersky OpenTIP (`scripts/av-online-check.js`) when `METADEFENDER_APIKEY` and `OPENTIP_APIKEY` are set.
 
-The keys are read from the environment or from `~/.config/hwinfo-streamdeck/av.env` (`KEY=value` lines, outside the repository; override the path with `AV_CHECK_ENV`).
+The keys are read from the environment or from `~/.config/av-check/av.env` (`KEY=value` lines). That file is shared with lhm-streamdeck and any other project that uses this check, and stays outside the repositories. Override the path with `AV_CHECK_ENV`.
 
 Nothing is uploaded unless `AV_CHECK_FLAGS=--upload` is passed; uploading shares the file with the vendors before the release exists. Reports are written to `build/av-reports/<package>-<timestamp>/` with a `summary.md`.
 

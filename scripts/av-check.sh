@@ -12,8 +12,8 @@
 #      --upload).
 # Reports go to build/av-reports/<package>-<timestamp>/ with a summary.md.
 # API keys (VIRUSTOTAL_APIKEY, METADEFENDER_APIKEY, OPENTIP_APIKEY) come from the
-# environment or from $AV_CHECK_ENV, default ~/.config/hwinfo-streamdeck/av.env
-# (KEY=value lines; the file stays outside the repository).
+# environment or from $AV_CHECK_ENV, default ~/.config/av-check/av.env (shared
+# with other projects; KEY=value lines; the file stays outside the repository).
 #
 # Usage: scripts/av-check.sh [--upload] [--reanalyze] [--offline] [--update] [package]
 #   package    defaults to the newest build/com.moeilijk.hwinfo-*.streamDeckPlugin
@@ -27,7 +27,7 @@ set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$HERE/.." && pwd)"
 
-env_file="${AV_CHECK_ENV:-$HOME/.config/hwinfo-streamdeck/av.env}"
+env_file="${AV_CHECK_ENV:-$HOME/.config/av-check/av.env}"
 if [ -r "$env_file" ]; then
   set -a; . "$env_file"; set +a
 fi
