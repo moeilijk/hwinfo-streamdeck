@@ -57,6 +57,8 @@ The check scans the `.streamDeckPlugin` package and the `hwinfo.exe` and `hwinfo
 - VirusTotal hash lookup (`scripts/virustotal-file.js`) when `VT_API_KEY` is set.
 - OPSWAT MetaDefender Cloud and Kaspersky OpenTIP (`scripts/av-online-check.js`) when `METADEFENDER_APIKEY` and `OPENTIP_APIKEY` are set.
 
+The keys are read from the environment or from `~/.config/hwinfo-streamdeck/av.env` (`KEY=value` lines, outside the repository; override the path with `AV_CHECK_ENV`).
+
 Nothing is uploaded unless `AV_CHECK_FLAGS=--upload` is passed; uploading shares the file with the vendors before the release exists. Reports are written to `build/av-reports/<package>-<timestamp>/` with a `summary.md`.
 
 Scan the package, not only the executables: a signature can match the zip container while every file inside is clean (that happened with 3.1.1).

@@ -11,6 +11,9 @@
 #      scripts/av-online-check.js when their keys are set (upload only with
 #      --upload).
 # Reports go to build/av-reports/<package>-<timestamp>/ with a summary.md.
+# API keys (VT_API_KEY, METADEFENDER_APIKEY, OPENTIP_APIKEY) come from the
+# environment or from $AV_CHECK_ENV, default ~/.config/hwinfo-streamdeck/av.env
+# (KEY=value lines; the file stays outside the repository).
 #
 # Usage: scripts/av-check.sh [--upload] [--offline] [--update] [package]
 #   package    defaults to the newest build/com.moeilijk.hwinfo-*.streamDeckPlugin
@@ -22,6 +25,11 @@ set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$HERE/.." && pwd)"
+
+env_file="${AV_CHECK_ENV:-$HOME/.config/hwinfo-streamdeck/av.env}"
+if [ -r "$env_file" ]; then
+  set -a; . "$env_file"; set +a
+fi
 
 upload=0; offline=0; update=()
 while [ $# -gt 0 ]; do

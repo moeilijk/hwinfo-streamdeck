@@ -96,8 +96,10 @@ async function saveJson(opts, service, hash, data) {
 function mdSummary(report) {
   const sr = report?.scan_results || {};
   const details = sr.scan_details || {};
+  // scan_result_i: 0 clean, 1 infected, 2 suspicious, 23 still in progress on
+  // that engine (not a verdict); other codes are skip/error states.
   const detections = Object.entries(details)
-    .filter(([, r]) => r && r.scan_result_i && r.scan_result_i !== 0 && r.threat_found)
+    .filter(([, r]) => r && (r.scan_result_i === 1 || r.scan_result_i === 2) && r.threat_found)
     .map(([engine, r]) => `${engine}: ${r.threat_found}`);
   return {
     engines: Object.keys(details).length,
@@ -105,6 +107,10 @@ function mdSummary(report) {
     overall: sr.scan_all_result_a || "unknown",
     progress: sr.progress_percentage,
     detections,
+    // A hash lookup of a file MetaDefender never scanned returns a bare
+    // reputation record: a single engine, no start_time, no file type. That is
+    // not a scan; only an upload produces a full multi-engine result.
+    partial: !sr.start_time && Object.keys(details).length < 5,
   };
 }
 
@@ -112,8 +118,13 @@ async function metadefender(file, hash, opts, key) {
   const headers = { apikey: key };
   let { status, json } = await request(`${MD_BASE}/hash/${hash}`, { headers });
   if (status === 200 && json?.scan_results) {
-    await saveJson(opts, "metadefender", hash, json);
-    return { known: true, ...mdSummary(json) };
+    const summary = mdSummary(json);
+    // A bare reputation record is not a scan; with --upload, submit the file
+    // anyway so every engine looks at it.
+    if (!(summary.partial && opts.upload)) {
+      await saveJson(opts, "metadefender", hash, json);
+      return { known: true, ...summary };
+    }
   }
   if (status !== 404 && status !== 200) {
     throw new Error(`MetaDefender hash lookup HTTP ${status}: ${json?.error?.messages?.join("; ") || ""}`);
@@ -226,7 +237,7 @@ async function main() {
           continue;
         }
         process.stdout.write(
-          `${name}: ${r.detected}/${r.engines} detected, overall ${r.overall}${r.uploaded ? ", uploaded" : ""}\n`,
+          `${name}: ${r.detected}/${r.engines} detected, overall ${r.overall}${r.uploaded ? ", uploaded" : ""}${r.partial ? " (reputation lookup only, not scanned; rerun with --upload for a full scan)" : ""}\n`,
         );
         for (const d of r.detections) process.stdout.write(`  - ${d}\n`);
         if (r.detected > 0) detections++;
