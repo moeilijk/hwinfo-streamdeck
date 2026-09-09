@@ -63,7 +63,7 @@ release: verify plugin
 # Antivirus check of the packed artifact (issue #116): the Microsoft Defender
 # engine with current definitions runs offline under wine64 and is the hard
 # gate; VirusTotal, MetaDefender and OpenTIP run when their API keys are set.
-# AV_CHECK_FLAGS: --upload (submit unknown files), --offline, --update.
+# AV_CHECK_FLAGS: --upload (submit unknown files), --reanalyze (VirusTotal rescan), --offline, --update.
 AV_CHECK_FLAGS?=
 av-check:
 	bash scripts/av-check.sh $(AV_CHECK_FLAGS)

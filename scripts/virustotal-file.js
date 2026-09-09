@@ -18,6 +18,8 @@ Usage:
 
 Options:
   --upload-missing     Upload files that are not already known to VirusTotal.
+  --reanalyze          Ask VirusTotal to rescan files it already knows with the
+                       current engines (no upload); combine with --wait.
   --wait               Wait for uploaded analyses to complete.
   --poll-ms <ms>       Poll interval when --wait is used. Default: ${DEFAULT_POLL_MS}
   --timeout-s <sec>    Timeout when --wait is used. Default: ${DEFAULT_TIMEOUT_MS / 1000}
@@ -47,6 +49,7 @@ function sleep(ms) {
 function parseArgs(argv) {
   const options = {
     uploadMissing: false,
+    reanalyze: false,
     wait: false,
     pollMs: DEFAULT_POLL_MS,
     timeoutMs: DEFAULT_TIMEOUT_MS,
@@ -63,6 +66,10 @@ function parseArgs(argv) {
     }
     if (arg === "--wait") {
       options.wait = true;
+      continue;
+    }
+    if (arg === "--reanalyze") {
+      options.reanalyze = true;
       continue;
     }
     if (arg === "--json") {
@@ -206,6 +213,13 @@ class VirusTotalClient {
     return response.json();
   }
 
+  async reanalyzeFile(hash) {
+    const response = await this.request(`${API_BASE}/files/${hash}/analyse`, {
+      method: "POST",
+    });
+    return response.json();
+  }
+
   async getAnalysis(analysisId, selfLink) {
     const url = selfLink || `${API_BASE}/analyses/${analysisId}`;
     const response = await this.request(url);
@@ -304,6 +318,21 @@ async function resolveFileObject(client, filePath, options) {
   const sha256 = await sha256File(filePath);
   let fileObject = await client.getFileByHash(sha256);
 
+  if (fileObject && options.reanalyze) {
+    printHeader(filePath);
+    printKeyValue("sha256", sha256);
+    printKeyValue("reanalyze", "requesting a rescan with the current engines");
+    const reanalyzeResponse = await client.reanalyzeFile(sha256);
+    if (!options.wait) {
+      printKeyValue("analysis_id", reanalyzeResponse?.data?.id || "unknown");
+      printKeyValue("hint", "rerun with --wait to poll until the rescan completes");
+    } else {
+      await waitForAnalysis(client, reanalyzeResponse, options);
+      fileObject = await client.getFileByHash(sha256);
+    }
+    return { sha256, fileObject, uploaded: false };
+  }
+
   if (fileObject) {
     return { sha256, fileObject, uploaded: false };
   }
@@ -339,9 +368,10 @@ async function resolveFileObject(client, filePath, options) {
 
 async function main() {
   const options = parseArgs(process.argv.slice(2));
-  const apiKey = process.env.VT_API_KEY || process.env.VIRUSTOTAL_API_KEY;
+  const apiKey =
+    process.env.VT_API_KEY || process.env.VIRUSTOTAL_API_KEY || process.env.VIRUSTOTAL_APIKEY;
   if (!apiKey) {
-    fail("Set VT_API_KEY or VIRUSTOTAL_API_KEY before running this script.");
+    fail("Set VT_API_KEY, VIRUSTOTAL_API_KEY or VIRUSTOTAL_APIKEY before running this script.");
   }
 
   const client = new VirusTotalClient(apiKey);
