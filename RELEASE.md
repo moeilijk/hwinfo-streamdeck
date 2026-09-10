@@ -44,7 +44,7 @@ For Marketplace updates, write only the Windows-relevant delta since the current
 
 ### Marketplace status
 
-A moeilijk Marketplace listing "HWiNFO" was submitted through the Maker Console on 26 July 2026 at version 3.0.0 (auto-publish enabled) and is awaiting Elgato review; do not reference it as published until it appears on the Marketplace. The older "HWiNFO" listing on the Marketplace belongs to the exension maker account and is not ours: never write changelogs against it or propose releasing under its identity. Once the moeilijk listing is published, look up its version on its product page (Version and "Last Updated" fields) and write the Marketplace changelog as the Windows-relevant delta since that version.
+The moeilijk Marketplace listing "HWiNFO" is live (published 31 July 2026 at version 3.1.1). Look up its version on its product page (Version and "Last Updated" fields) and write the Marketplace changelog as the Windows-relevant delta since that version. The older "HWiNFO" listing on the Marketplace belongs to the exension maker account and is not ours: never write changelogs against it or propose releasing under its identity.
 
 ## Antivirus check
 
