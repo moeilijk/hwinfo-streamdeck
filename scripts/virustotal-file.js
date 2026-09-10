@@ -202,7 +202,9 @@ class VirusTotalClient {
       uploadUrl = payload.data;
     }
 
-    const blob = await fs.openAsBlob(filePath);
+    // fs.openAsBlob needs Node 19.8+; the system node in a bare WSL shell is
+    // older, so read the file into memory (release packages are ~20 MB).
+    const blob = new Blob([await fsp.readFile(filePath)]);
     const form = new FormData();
     form.append("file", blob, path.basename(filePath));
 
