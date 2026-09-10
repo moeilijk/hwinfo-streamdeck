@@ -92,6 +92,8 @@ case $rc in
   *)  note "Result: scan failed (exit $rc), see defender.txt."; errors=$((errors+1)) ;;
 esac
 grep -E "^defender-scan: engine" "$report/defender.txt" | sed 's/^defender-scan: /Versions: /' >> "$report/summary.md"
+# The definitions the offline engine just downloaded are the floor for the VM.
+offline_defs=$(sed -n 's/^defender-scan: engine .*, definitions \([0-9.]*\),.*/\1/p' "$report/defender.txt" | head -1)
 note ""
 
 # 1b. The real Defender, cloud protection included, in the QEMU/KVM test VM
@@ -102,12 +104,14 @@ vmdir="${DEFENDER_VM_DIR:-$HOME/.cache/defender-vm}"
 if [ ! -f "$vmdir/clean.stamp" ]; then
   note "Skipped: no VM baseline in $vmdir (see scripts/defender-vm.sh create/prepare/clean)."
 else
-  "$HERE/defender-vm.sh" scan --out "$report/defender-vm" "${files[@]}" 2>&1 | tee "$report/defender-vm-run.txt"
+  vmopts=()
+  [ -n "$offline_defs" ] && vmopts=(--min-signatures "$offline_defs")
+  "$HERE/defender-vm.sh" scan --out "$report/defender-vm" "${vmopts[@]}" "${files[@]}" 2>&1 | tee "$report/defender-vm-run.txt"
   rc=${PIPESTATUS[0]}
   case $rc in
     0)  note "Result: clean." ;;
     10) note "Result: DETECTION, see defender-vm/summary.md."; detections=$((detections+1)) ;;
-    *)  note "Result: VM scan failed (exit $rc), see defender-vm-run.txt."; errors=$((errors+1)) ;;
+    *)  note "Result: VM scan FAILED (exit $rc; stale definitions or no report), see defender-vm/summary.md and defender-vm-run.txt. This is not a clean result."; errors=$((errors+1)) ;;
   esac
   [ -f "$report/defender-vm/summary.md" ] && sed -n '3,4p' "$report/defender-vm/summary.md" >> "$report/summary.md"
 fi

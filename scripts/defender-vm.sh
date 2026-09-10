@@ -10,14 +10,20 @@
 #
 # Usage: scripts/defender-vm.sh <command> [args]
 #   create  --iso <win11.iso>   unattended install, then OpenSSH; takes a while
-#   prepare                     update Defender platform and definitions,
-#                               validate cloud connection, shut down
+#   prepare                     update the Defender platform, reboot so the
+#                               platform switch is committed, update the
+#                               definitions, validate the cloud connection,
+#                               shut down
 #   clean                       mark the current disk as the clean baseline;
 #                               every scan starts from a copy of it
-#   scan [--out <dir>] <file>.. copy files into a fresh VM, let real-time
-#                               protection and MpCmdRun judge them, collect
-#                               detections, definition versions and the
-#                               Defender event log, shut down and discard
+#   scan [--out <dir>] [--min-signatures <ver>] <file>..
+#                               copy files into a fresh VM, update the
+#                               definitions, let real-time protection and
+#                               MpCmdRun judge the files, collect detections,
+#                               definition versions and the Defender event
+#                               log, shut down and discard. With
+#                               --min-signatures the scan fails (exit 1) when
+#                               the definitions end up below that version.
 #   status | screenshot [file] | ssh [cmd] | stop | destroy
 # Env: DEFENDER_VM_DIR (default ~/.cache/defender-vm), DEFENDER_VM_RAM (6G),
 #      DEFENDER_VM_CPUS (4), DEFENDER_VM_DISK (60G), DEFENDER_VM_SSH_PORT (2222),
@@ -106,6 +112,48 @@ wait_off() {
   while vm_running && [ "$(date +%s)" -lt "$deadline" ]; do sleep 3; done
   if vm_running; then log "VM still running, killing it"; qmp quit >/dev/null 2>&1 || kill "$(vm_pid)" || true; sleep 2; fi
   pkill -f "swtpm socket --tpmstate dir=$VMDIR" 2>/dev/null || true
+}
+
+# PowerShell snippet: prints "defender-ready <product> <signatures>" when the
+# service answers and the running platform (AMProductVersion) is the newest
+# one under ProgramData\Microsoft\Windows Defender\Platform. While a platform
+# update is being installed the directory is absent or newer than the running
+# service, the service restarts, and a signature update fired into that window
+# is lost (MpCmdRun still reports "finished").
+DEFENDER_READY_PS='
+  try {
+    if ((Get-Service WinDefend).Status -ne "Running") { "not-ready service"; exit }
+    $s = Get-MpComputerStatus -ErrorAction Stop; Get-MpPreference -ErrorAction Stop | Out-Null
+    $p = Get-ChildItem "$env:ProgramData\Microsoft\Windows Defender\Platform" -Directory -ErrorAction SilentlyContinue | Sort-Object Name -Descending | Select-Object -First 1
+    if (-not $p) { "not-ready no-platform-dir"; exit }
+    $pv = $p.Name -replace "-.*$", ""
+    if ($s.AMProductVersion -ne $pv) { "not-ready service $($s.AMProductVersion) platform $pv"; exit }
+    "defender-ready $($s.AMProductVersion) $($s.AntivirusSignatureVersion)"
+  } catch { "not-ready " + $_.Exception.Message }
+'
+
+wait_defender_ready() {
+  local deadline=$(( $(date +%s) + ${1:-300} )) state=""
+  while [ "$(date +%s)" -lt "$deadline" ]; do
+    state="$(vm_ps "$DEFENDER_READY_PS" 2>/dev/null | tr -d '\r' | grep -m1 -E '^(defender-ready|not-ready)' || true)"
+    case "$state" in defender-ready*) log "Defender ready: ${state#defender-ready }"; return 0 ;; esac
+    sleep 10
+  done
+  log "Defender not ready: ${state:-no answer}"
+  return 1
+}
+
+# Definitions from the newest platform's MpCmdRun; prints the resulting
+# AntivirusSignatureVersion (Get-MpComputerStatus, not the MpCmdRun output,
+# which shows the versions from before the update).
+update_definitions() {
+  vm_ps '
+    $ErrorActionPreference = "Continue"
+    $p = Get-ChildItem "$env:ProgramData\Microsoft\Windows Defender\Platform" -Directory -ErrorAction SilentlyContinue | Sort-Object Name -Descending | Select-Object -First 1
+    $mp = if ($p) { Join-Path $p.FullName "MpCmdRun.exe" } else { "$env:ProgramFiles\Windows Defender\MpCmdRun.exe" }
+    & $mp -SignatureUpdate 2>&1 | Out-Null
+    "signatures " + (Get-MpComputerStatus).AntivirusSignatureVersion
+  ' 2>/dev/null | tr -d '\r' | grep -m1 '^signatures' || echo "signatures unknown"
 }
 
 start_vm() {
@@ -198,12 +246,30 @@ cmd_prepare() {
     start_vm "$BASE_DISK" "$BASE_VARS" "$BASE_TPM"
     wait_ssh 600 || die "no ssh"
   fi
-  log "updating Defender platform and definitions, validating cloud connection"
+  # The first update after a fresh install pulls in a platform update: the
+  # service restarts into the new platform and the definitions of that same
+  # call are lost. Without a reboot the switch is not committed and every
+  # boot repeats it, so: update, wait for the switch, reboot, then update the
+  # definitions on the committed platform and verify.
+  log "first update (may install a platform update)"
+  update_definitions >/dev/null
+  log "waiting for the platform switch to settle"
+  wait_defender_ready 600 || die "Defender platform switch did not settle"
+  log "rebooting to commit the platform"
+  vm_ps 'Restart-Computer -Force' >/dev/null 2>&1 || true
+  sleep 30
+  wait_ssh 600 || die "no ssh after reboot"
+  wait_defender_ready 600 || die "Defender not ready after reboot"
+  log "updating definitions on the committed platform"
+  local before after
+  before="$(vm_ps '(Get-MpComputerStatus).AntivirusSignatureVersion' 2>/dev/null | tr -d '\r')"
+  after="$(update_definitions)"
+  log "definitions before ${before:-?}, ${after}"
+  log "validating cloud connection"
   vm_ps '
     $ErrorActionPreference = "Continue"
     $p = Get-ChildItem "$env:ProgramData\Microsoft\Windows Defender\Platform" -Directory -ErrorAction SilentlyContinue | Sort-Object Name -Descending | Select-Object -First 1
     $mp = if ($p) { Join-Path $p.FullName "MpCmdRun.exe" } else { "$env:ProgramFiles\Windows Defender\MpCmdRun.exe" }
-    & $mp -SignatureUpdate | Out-String
     & $mp -ValidateMapsConnection | Out-String
     Get-MpComputerStatus | Select-Object AMProductVersion, AMEngineVersion, AntivirusSignatureVersion, AntivirusSignatureLastUpdated, RealTimeProtectionEnabled, IsTamperProtected | Format-List | Out-String
     Get-MpPreference | Select-Object MAPSReporting, SubmitSamplesConsent, CloudBlockLevel, DisableRealtimeMonitoring | Format-List | Out-String
@@ -222,8 +288,8 @@ cmd_clean() {
 }
 
 cmd_scan() {
-  local out=""
-  while [ $# -gt 0 ]; do case "$1" in --out) out="$2"; shift 2 ;; -*) die "unknown option: $1" ;; *) break ;; esac; done
+  local out="" minsig=""
+  while [ $# -gt 0 ]; do case "$1" in --out) out="$2"; shift 2 ;; --min-signatures) minsig="$2"; shift 2 ;; -*) die "unknown option: $1" ;; *) break ;; esac; done
   [ $# -ge 1 ] || die "scan needs at least one file"
   [ -f "$CLEAN_STAMP" ] || die "no clean baseline; run create, prepare and clean first"
   local f; for f in "$@"; do [ -r "$f" ] || die "cannot read: $f"; done
@@ -233,6 +299,8 @@ cmd_scan() {
   fresh_run
   start_vm "$RUN/disk.qcow2" "$RUN/ovmf_vars.fd" "$RUN/tpm"
   wait_ssh 600 || { wait_off 60; die "no ssh"; }
+  log "waiting for the Defender service to settle after boot"
+  wait_defender_ready 300 || { wait_off 60; die "Defender service not ready"; }
 
   vm_ps 'Remove-Item -Recurse -Force C:\avscan\in -ErrorAction SilentlyContinue; New-Item -ItemType Directory -Force C:\avscan\in | Out-Null; (Get-Date -Format o) | Set-Content C:\avscan\scan-start' >/dev/null
   local names=()
@@ -252,10 +320,15 @@ cmd_scan() {
     \$p = Get-ChildItem \"\$env:ProgramData\Microsoft\Windows Defender\Platform\" -Directory -ErrorAction SilentlyContinue | Sort-Object Name -Descending | Select-Object -First 1
     \$mp = if (\$p) { Join-Path \$p.FullName 'MpCmdRun.exe' } else { \"\$env:ProgramFiles\Windows Defender\MpCmdRun.exe\" }
     \$r = [ordered]@{}
+    \$s0 = Get-MpComputerStatus
+    \$r.signatures_before = [ordered]@{ version = \$s0.AntivirusSignatureVersion; updated = \$s0.AntivirusSignatureLastUpdated.ToString('o') }
+    # MpCmdRun prints the versions from BEFORE the update; the result is read
+    # from Get-MpComputerStatus afterwards.
     \$r.sigupdate = (& \$mp -SignatureUpdate 2>&1 | Out-String)
+    \$r.sigupdate_exit = \$LASTEXITCODE
     \$r.maps = (& \$mp -ValidateMapsConnection 2>&1 | Out-String)
     \$s = Get-MpComputerStatus
-    \$r.versions = [ordered]@{ platform = \$s.AMProductVersion; engine = \$s.AMEngineVersion; signatures = \$s.AntivirusSignatureVersion; realtime = \$s.RealTimeProtectionEnabled }
+    \$r.versions = [ordered]@{ platform = \$s.AMProductVersion; engine = \$s.AMEngineVersion; signatures = \$s.AntivirusSignatureVersion; signatures_updated = \$s.AntivirusSignatureLastUpdated.ToString('o'); realtime = \$s.RealTimeProtectionEnabled }
     \$pref = Get-MpPreference
     \$r.cloud = [ordered]@{ maps = \$pref.MAPSReporting; samples = \$pref.SubmitSamplesConsent; blocklevel = \$pref.CloudBlockLevel }
     Start-Sleep -Seconds 20
@@ -288,12 +361,19 @@ cmd_scan() {
   wait_off 300
   rm -rf "$RUN"
 
-  python3 - "$out/report.json" "$out/summary.md" <<'PY'
+  local rc=0
+  python3 - "$out/report.json" "$out/summary.md" "$minsig" <<'PY' || rc=$?
 import json, sys
 r = json.load(open(sys.argv[1], encoding="utf-8-sig"))
-v, c = r["versions"], r["cloud"]
+v, c, minsig = r["versions"], r["cloud"], sys.argv[3]
+ver = lambda x: tuple(int(n) for n in x.split("."))
+before = r.get("signatures_before", {}).get("version", "?")
+stale = bool(minsig) and ver(v["signatures"]) < ver(minsig)
+sig = f"signatures {v['signatures']} (updated {v.get('signatures_updated', '?')[:19]}, before the update {before}"
+sig += f", required at least {minsig}" if minsig else ""
+sig += ")"
 lines = ["# Defender VM scan", "",
-         f"- Platform {v['platform']}, engine {v['engine']}, signatures {v['signatures']}, real-time protection {v['realtime']}",
+         f"- Platform {v['platform']}, engine {v['engine']}, {sig}, real-time protection {v['realtime']}",
          f"- Cloud: MAPS {c['maps']}, sample submission {c['samples']}, block level {c['blocklevel']}",
          f"- Cloud connection: {'ok' if 'ValidateMapsConnection successfully' in r['maps'] else 'NOT validated'}", ""]
 for f in r["files"]:
@@ -303,12 +383,16 @@ for f in r["files"]:
         lines.append(f"- **{f['name']}**: MpCmdRun exit {f.get('scan_exit')} ({'threat found' if f.get('scan_exit') == 2 else 'clean' if f.get('scan_exit') == 0 else 'error'})")
 if r["threats"]:
     lines += ["", "## Detections"] + [f"- {t['threat']} on {t['resources']} at {t['time']}" for t in r["threats"]]
-lines += ["", f"Result: {'DETECTION' if r['detected'] else 'clean'}"]
+if stale:
+    lines += ["", f"Result: FAILED, definitions {v['signatures']} are older than the required {minsig}; the verdict above does not count"]
+else:
+    lines += ["", f"Result: {'DETECTION' if r['detected'] else 'clean'}"]
 open(sys.argv[2], "w").write("\n".join(lines) + "\n")
 print("\n".join(lines))
+sys.exit(1 if stale else 10 if r["detected"] else 0)
 PY
   log "report: $out"
-  python3 -c 'import json,sys; sys.exit(10 if json.load(open(sys.argv[1], encoding="utf-8-sig"))["detected"] else 0)' "$out/report.json"
+  return $rc
 }
 
 cmd_status() {
