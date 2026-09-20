@@ -17,8 +17,8 @@
 #   clean                       mark the current disk as the clean baseline;
 #                               every scan starts from a copy of it
 #   scan [--out <dir>] [--min-signatures <ver>] <file>..
-#                               copy files into a fresh VM, update the
-#                               definitions, let real-time protection and
+#                               update the definitions in a fresh VM, copy the
+#                               files in, let real-time protection and
 #                               MpCmdRun judge the files, collect detections,
 #                               definition versions and the Defender event
 #                               log, shut down and discard. With
@@ -27,7 +27,8 @@
 #   status | screenshot [file] | ssh [cmd] | stop | destroy
 # Env: DEFENDER_VM_DIR (default ~/.cache/defender-vm), DEFENDER_VM_RAM (6G),
 #      DEFENDER_VM_CPUS (4), DEFENDER_VM_DISK (60G), DEFENDER_VM_SSH_PORT (2222),
-#      DEFENDER_VM_VNC (127.0.0.1:0, first free port from 5900; empty disables).
+#      DEFENDER_VM_VNC (127.0.0.1:0, first free port from 5900; empty disables),
+#      DEFENDER_VM_UPDATE_TIMEOUT (1800s to reach the definitions asked for).
 # Exit: 0 clean, 10 detection, 1 failure (scan); 0/1 for the other commands.
 set -euo pipefail
 
@@ -39,6 +40,7 @@ CPUS="${DEFENDER_VM_CPUS:-4}"
 DISK="${DEFENDER_VM_DISK:-60G}"
 SSH_PORT="${DEFENDER_VM_SSH_PORT:-2222}"
 VNC="${DEFENDER_VM_VNC-127.0.0.1:0}"
+UPDATE_TIMEOUT="${DEFENDER_VM_UPDATE_TIMEOUT:-1800}"
 # The Secure Boot firmware builds (*.ms.fd, *.secboot.fd) keep their variable
 # store behind SMM; every UEFI variable write then enters SMM, which KVM nested
 # under Hyper-V/WSL cannot enter ("KVM: entry failed, hardware error"). The
@@ -92,8 +94,21 @@ ssh_opts() {
   echo -i "$KEY" -p "$SSH_PORT" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
        -o ConnectTimeout=5 -o LogLevel=ERROR -o BatchMode=yes
 }
-# vm_ps <powershell>  runs PowerShell in the guest (sshd default shell is powershell.exe)
-vm_ps() { ssh $(ssh_opts) "$GUEST_USER@127.0.0.1" "$1"; }
+# vm_ps <powershell>  runs PowerShell in the guest (sshd default shell is
+# powershell.exe). Exit 255 is ssh itself failing to connect (the guest drops
+# connections while Defender restarts into a new platform), which is worth
+# retrying; any other exit code is the guest's own answer and is passed on.
+vm_ps() {
+  local i rc
+  for i in 1 2 3; do
+    ssh $(ssh_opts) "$GUEST_USER@127.0.0.1" "$1" && return 0
+    rc=$?
+    [ "$rc" = 255 ] || return "$rc"
+    vm_running || return "$rc"
+    sleep 10
+  done
+  return "$rc"
+}
 vm_put() { scp $(ssh_opts | sed 's/-p /-P /') "$1" "$GUEST_USER@127.0.0.1:$2"; }
 vm_get() { scp $(ssh_opts | sed 's/-p /-P /') "$GUEST_USER@127.0.0.1:$1" "$2"; }
 
@@ -120,6 +135,12 @@ wait_off() {
 # update is being installed the directory is absent or newer than the running
 # service, the service restarts, and a signature update fired into that window
 # is lost (MpCmdRun still reports "finished").
+#
+# The guest also updates itself: a few minutes after every boot Windows Update
+# installs the pending definitions through TrustedInstaller and MpSigStub.
+# MpCmdRun -SignatureUpdate fired into that window fails with
+# 0x80070652 (ERROR_INSTALL_ALREADY_IN_PROGRESS) and the definitions stay on
+# the baseline version, so an installer that is running is "not ready" too.
 DEFENDER_READY_PS='
   try {
     if ((Get-Service WinDefend).Status -ne "Running") { "not-ready service"; exit }
@@ -128,6 +149,9 @@ DEFENDER_READY_PS='
     if (-not $p) { "not-ready no-platform-dir"; exit }
     $pv = $p.Name -replace "-.*$", ""
     if ($s.AMProductVersion -ne $pv) { "not-ready service $($s.AMProductVersion) platform $pv"; exit }
+    if (-not $s.AntivirusSignatureVersion) { "not-ready no-signature-version"; exit }
+    $busy = @(Get-Process MpSigStub, TrustedInstaller -ErrorAction SilentlyContinue | Select-Object -Expand Name) -join ","
+    if ($busy) { "not-ready installer $busy"; exit }
     "defender-ready $($s.AMProductVersion) $($s.AntivirusSignatureVersion)"
   } catch { "not-ready " + $_.Exception.Message }
 '
@@ -154,6 +178,59 @@ update_definitions() {
     & $mp -SignatureUpdate 2>&1 | Out-Null
     "signatures " + (Get-MpComputerStatus).AntivirusSignatureVersion
   ' 2>/dev/null | tr -d '\r' | grep -m1 '^signatures' || echo "signatures unknown"
+}
+
+signature_version() {
+  vm_ps '"signatures " + (Get-MpComputerStatus).AntivirusSignatureVersion' 2>/dev/null |
+    tr -d '\r' | sed -n 's/^signatures //p' | head -1
+}
+
+# True when $1 is a version equal to or newer than $2. Anything that is not a
+# dotted number ("unknown", an empty answer from a restarting service) is not a
+# version and never satisfies the minimum.
+ver_ge() {
+  case "$1" in ''|*[!0-9.]*) return 1 ;; esac
+  case "$2" in ''|*[!0-9.]*) return 1 ;; esac
+  [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -1)" = "$2" ]
+}
+
+# Brings the definitions to at least $1 (empty: just update once), working
+# around the guest's own update: Windows Update installs the pending
+# definitions a few minutes after boot and holds the installer lock, so an
+# MpCmdRun update fired into that window fails with 0x80070652. Waiting for
+# the installer to finish is enough in most runs, since the guest then has the
+# current definitions by itself; what remains is updated by MpCmdRun. Retries
+# until $2 seconds have passed (DEFENDER_VM_UPDATE_TIMEOUT, default 1800).
+# Sets DEF_BEFORE and DEF_AFTER. Returns 1 only when the deadline passes.
+ensure_definitions() {
+  local minsig="${1:-}" deadline=$(( $(date +%s) + ${2:-$UPDATE_TIMEOUT} )) remaining
+  DEF_BEFORE=""; DEF_AFTER=""
+  while :; do
+    remaining=$(( deadline - $(date +%s) ))
+    [ "$remaining" -gt 0 ] || break
+    wait_defender_ready "$remaining" || { sleep 15; continue; }
+    DEF_AFTER="$(signature_version)"
+    # A service that is restarting into a new platform answers with an empty
+    # version; that is a state to wait out, not a result.
+    case "$DEF_AFTER" in ''|*[!0-9.]*) log "no definition version yet, waiting"; sleep 20; continue ;; esac
+    [ -n "$DEF_BEFORE" ] || DEF_BEFORE="$DEF_AFTER"
+    if [ -n "$minsig" ] && ver_ge "$DEF_AFTER" "$minsig"; then
+      log "definitions $DEF_AFTER (at least $minsig required)"
+      return 0
+    fi
+    log "definitions $DEF_AFTER${minsig:+, want at least $minsig}; updating"
+    DEF_AFTER="$(update_definitions)"; DEF_AFTER="${DEF_AFTER#signatures }"
+    if [ -z "$minsig" ]; then
+      case "$DEF_AFTER" in ''|*[!0-9.]*) ;; *) log "definitions $DEF_AFTER"; return 0 ;; esac
+    elif ver_ge "$DEF_AFTER" "$minsig"; then
+      log "definitions $DEF_AFTER (at least $minsig required)"
+      return 0
+    fi
+    log "definitions still $DEF_AFTER; the guest is installing its own update, waiting"
+    sleep 30
+  done
+  log "definitions stuck at ${DEF_AFTER:-unknown}${minsig:+, needed at least $minsig}"
+  return 1
 }
 
 start_vm() {
@@ -261,10 +338,8 @@ cmd_prepare() {
   wait_ssh 600 || die "no ssh after reboot"
   wait_defender_ready 600 || die "Defender not ready after reboot"
   log "updating definitions on the committed platform"
-  local before after
-  before="$(vm_ps '(Get-MpComputerStatus).AntivirusSignatureVersion' 2>/dev/null | tr -d '\r')"
-  after="$(update_definitions)"
-  log "definitions before ${before:-?}, ${after}"
+  ensure_definitions || die "definitions did not update"
+  log "definitions before ${DEF_BEFORE:-?}, now ${DEF_AFTER:-?}"
   log "validating cloud connection"
   vm_ps '
     $ErrorActionPreference = "Continue"
@@ -296,11 +371,30 @@ cmd_scan() {
   [ -n "$out" ] || out="$VMDIR/reports/$(date +%Y%m%d-%H%M%S)"
   mkdir -p "$out"
 
+  # A run that died (a broken ssh connection, a killed script) used to leave
+  # its VM behind, and every later scan then stopped at "VM already running".
+  # A disposable run is never worth keeping, so it is cleaned up here, and a
+  # trap makes sure this run does not leave one behind either.
+  if vm_running; then
+    if tr '\0' ' ' < "/proc/$(vm_pid)/cmdline" 2>/dev/null | grep -qF "$RUN/disk.qcow2"; then
+      log "leftover disposable VM (pid $(vm_pid)), discarding it"
+      qmp quit >/dev/null 2>&1 || kill "$(vm_pid)" 2>/dev/null || true
+      wait_off 120
+    else
+      die "another VM is running (pid $(vm_pid)); stop it first"
+    fi
+  fi
   fresh_run
+  trap 'log "scan interrupted, shutting the VM down"; wait_off 120; rm -rf "$RUN"' EXIT
   start_vm "$RUN/disk.qcow2" "$RUN/ovmf_vars.fd" "$RUN/tpm"
-  wait_ssh 600 || { wait_off 60; die "no ssh"; }
+  wait_ssh 600 || die "no ssh"
+  # Definitions first: real-time protection judges the files the moment they
+  # are copied in, so it has to run on the definitions of today, not on those
+  # of the baseline.
   log "waiting for the Defender service to settle after boot"
-  wait_defender_ready 300 || { wait_off 60; die "Defender service not ready"; }
+  ensure_definitions "$minsig" || log "definitions did not reach ${minsig:-a newer version}; the scan below does not count"
+  wait_ssh 300 || die "no ssh after the definition update"
+  wait_defender_ready 600 || log "Defender not settled after the definition update"
 
   vm_ps 'Remove-Item -Recurse -Force C:\avscan\in -ErrorAction SilentlyContinue; New-Item -ItemType Directory -Force C:\avscan\in | Out-Null; (Get-Date -Format o) | Set-Content C:\avscan\scan-start' >/dev/null
   local names=()
@@ -314,18 +408,15 @@ cmd_scan() {
   vm_ps 'Get-ChildItem C:\avscan\in -File | ForEach-Object { Set-Content -Path $_.FullName -Stream Zone.Identifier -Value "[ZoneTransfer]`r`nZoneId=3`r`nReferrerUrl=https://github.com/`r`nHostUrl=https://github.com/" -ErrorAction SilentlyContinue }' >/dev/null 2>&1 || true
   local names_ps; names_ps="$(printf "'%s'," "${names[@]}")"; names_ps="${names_ps%,}"
 
-  log "updating definitions and scanning"
+  log "scanning"
   vm_ps "
     \$ErrorActionPreference = 'Continue'
     \$p = Get-ChildItem \"\$env:ProgramData\Microsoft\Windows Defender\Platform\" -Directory -ErrorAction SilentlyContinue | Sort-Object Name -Descending | Select-Object -First 1
     \$mp = if (\$p) { Join-Path \$p.FullName 'MpCmdRun.exe' } else { \"\$env:ProgramFiles\Windows Defender\MpCmdRun.exe\" }
     \$r = [ordered]@{}
-    \$s0 = Get-MpComputerStatus
-    \$r.signatures_before = [ordered]@{ version = \$s0.AntivirusSignatureVersion; updated = \$s0.AntivirusSignatureLastUpdated.ToString('o') }
-    # MpCmdRun prints the versions from BEFORE the update; the result is read
-    # from Get-MpComputerStatus afterwards.
-    \$r.sigupdate = (& \$mp -SignatureUpdate 2>&1 | Out-String)
-    \$r.sigupdate_exit = \$LASTEXITCODE
+    # The definitions were brought up to date by the host before the files
+    # were copied in (ensure_definitions); this is the version it started from.
+    \$r.signatures_before = [ordered]@{ version = '$DEF_BEFORE' }
     \$r.maps = (& \$mp -ValidateMapsConnection 2>&1 | Out-String)
     \$s = Get-MpComputerStatus
     \$r.versions = [ordered]@{ platform = \$s.AMProductVersion; engine = \$s.AMEngineVersion; signatures = \$s.AntivirusSignatureVersion; signatures_updated = \$s.AntivirusSignatureLastUpdated.ToString('o'); realtime = \$s.RealTimeProtectionEnabled }
@@ -357,6 +448,7 @@ cmd_scan() {
   vm_get 'C:/avscan/report.json' "$out/report.json" || die "no report from the VM"
 
   log "shutting down and discarding the run"
+  trap - EXIT
   vm_ps 'Stop-Computer -Force' >/dev/null 2>&1 || true
   wait_off 300
   rm -rf "$RUN"
@@ -369,7 +461,7 @@ v, c, minsig = r["versions"], r["cloud"], sys.argv[3]
 ver = lambda x: tuple(int(n) for n in x.split("."))
 before = r.get("signatures_before", {}).get("version", "?")
 stale = bool(minsig) and ver(v["signatures"]) < ver(minsig)
-sig = f"signatures {v['signatures']} (updated {v.get('signatures_updated', '?')[:19]}, before the update {before}"
+sig = f"signatures {v['signatures']} (updated {v.get('signatures_updated', '?')[:19]}, at boot {before}"
 sig += f", required at least {minsig}" if minsig else ""
 sig += ")"
 lines = ["# Defender VM scan", "",

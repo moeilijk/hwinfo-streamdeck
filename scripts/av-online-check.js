@@ -70,16 +70,38 @@ async function sha256(file) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// A transient network failure or a 429/5xx from the service is not a verdict:
+// reporting it as one turns "the lookup did not happen" into "this file is a
+// detection". Retry those before giving up; anything else is the service's own
+// answer and is returned as is.
+const RETRY_STATUS = new Set([429, 500, 502, 503, 504]);
+const RETRY_DELAYS = [2000, 5000, 10000];
+
 async function request(url, { method = "GET", headers = {}, body } = {}) {
-  const res = await fetch(url, { method, headers, body });
-  const text = await res.text();
-  let json = null;
-  try {
-    json = text ? JSON.parse(text) : null;
-  } catch {
-    json = null;
+  let lastError = null;
+  for (let attempt = 0; ; attempt++) {
+    let res;
+    try {
+      res = await fetch(url, { method, headers, body });
+    } catch (err) {
+      lastError = err;
+      if (attempt >= RETRY_DELAYS.length) throw new Error(`${err.message} (after ${attempt + 1} attempts)`);
+      await sleep(RETRY_DELAYS[attempt]);
+      continue;
+    }
+    if (RETRY_STATUS.has(res.status) && attempt < RETRY_DELAYS.length) {
+      await sleep(RETRY_DELAYS[attempt]);
+      continue;
+    }
+    const text = await res.text();
+    let json = null;
+    try {
+      json = text ? JSON.parse(text) : null;
+    } catch {
+      json = null;
+    }
+    return { status: res.status, json, text };
   }
-  return { status: res.status, json, text };
 }
 
 async function saveJson(opts, service, hash, data) {
@@ -248,6 +270,11 @@ async function main() {
     }
   }
 
+  // A failed lookup must stay visible even when another service did report a
+  // detection: exit code 10 would otherwise hide that the run is incomplete.
+  if (errors > 0) {
+    process.stdout.write(`INCOMPLETE: ${errors} lookup(s) failed; this report does not cover every service\n`);
+  }
   if (detections > 0) process.exitCode = 10;
   else if (errors > 0) process.exitCode = 1;
 }

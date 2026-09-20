@@ -155,6 +155,11 @@ else
     10) note "Result: DETECTION, see online.txt."; detections=$((detections+1)) ;;
     *)  note "Result: request failed (exit $rc), see online.txt."; errors=$((errors+1)) ;;
   esac
+  # A detection from one service must not hide that another lookup never ran.
+  if grep -q '^INCOMPLETE:' "$report/online.txt"; then
+    note "Warning: $(grep -m1 '^INCOMPLETE:' "$report/online.txt")"
+    errors=$((errors+1))
+  fi
   note ""
 fi
 
