@@ -48,12 +48,14 @@ The moeilijk Marketplace listing "HWiNFO" is live (published 31 July 2026 at ver
 
 ## Binaries
 
-Windows reputation services (Smart App Control, SmartScreen, Defender cloud protection) judge unsigned files by hash, so a release does not ship new hashes for `hwinfo.exe` and `hwinfo-bridge.exe` without a reason (issue #126).
+Windows reputation services (Smart App Control, SmartScreen, Defender cloud protection) judge unsigned files by hash, so a release does not ship new hashes for `hwinfo.exe` and `hwinfo-bridge.exe` without a reason (issue #126). Security comes first: a known vulnerability in the old binaries is always a reason.
 
 - Both binaries are built with `-trimpath -buildvcs=false`. The same source, dependencies and toolchain give the same bytes, whatever the build directory and whatever the commit. `make reproducible` checks this by building from two clones in different directories, one of them with an extra commit that touches no Go code; CI runs it on every push.
-- `make release` runs `scripts/release-binaries.sh` after `verify`. When the project's own Go code behind the two binaries is unchanged since the previous release tag, the script downloads that release and puts its binaries back in the plugin directory, byte for byte. Only the plugin files (manifest, Property Inspector, images) differ in such a release. The script prints which of the two happened, with the SHA-256 of both binaries, and fails when it should reuse the binaries but cannot download them.
-- Dependency and toolchain updates do not count as a reason by themselves. They stay on `main` and go out with the next release that changes the Go code. When one of them fixes a security issue that affects the plugin, release with `REBUILD_BINARIES=1 make release` and say so in the release notes.
-- Test files are not compiled into the binaries and never trigger a rebuild.
+- `make release` runs `scripts/release-binaries.sh` after `verify`. When the project's own Go code behind the two binaries is unchanged since the previous release tag, the script puts that release's binaries back in the plugin directory, byte for byte, so only the plugin files (manifest, Property Inspector, images) differ. Test files are not compiled in and never count as a change.
+- The old binaries are only reused after `scripts/scan-release.sh` has downloaded them, found their SHA-256 equal to the one recorded for that release in `release-hashes.txt`, and scanned them with `govulncheck -mode=binary` without a finding. With a finding the freshly built binaries ship instead, so a dependency or toolchain update that fixes something in the old binaries goes out with this release. When the hashes are missing or different, or the download or the scanner fails, the release stops; it never falls back to reusing unverified binaries.
+- Dependency and toolchain updates without a known vulnerability stay on `main` and go out with the next release that changes the Go code. `REBUILD_BINARIES=1 make release` ships fresh binaries regardless.
+- `make release` records the hashes of what it ships in `release-hashes.txt` under the version from the manifest. Run it before the release commit and commit that file with the release.
+- The "Release scan" workflow runs `scripts/scan-release.sh` on the latest published release every week. When it fails, the published binaries no longer match the record or contain a known vulnerability, and a new release is due.
 
 ## Antivirus check
 
