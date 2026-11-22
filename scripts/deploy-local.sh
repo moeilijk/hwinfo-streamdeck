@@ -22,8 +22,9 @@ fi
 echo "build: $plugin_dir/hwinfo.exe"
 (
   cd "$root_dir"
-  GOOS=windows GOARCH=amd64 go build -o "$plugin_dir/hwinfo.exe" ./cmd/hwinfo_streamdeck_plugin
-  GOOS=windows GOARCH=amd64 CGO_ENABLED=1 CC="${WINCC:-x86_64-w64-mingw32-gcc}" go build -o "$plugin_dir/hwinfo-bridge.exe" ./cmd/hwinfo-bridge
+  # Same flags as the Makefile, so the hardware test runs the bytes a release ships (#126).
+  GOOS=windows GOARCH=amd64 go build -trimpath -buildvcs=false -o "$plugin_dir/hwinfo.exe" ./cmd/hwinfo_streamdeck_plugin
+  GOOS=windows GOARCH=amd64 CGO_ENABLED=1 CC="${WINCC:-x86_64-w64-mingw32-gcc}" go build -trimpath -buildvcs=false -o "$plugin_dir/hwinfo-bridge.exe" ./cmd/hwinfo-bridge
   # Linux binaries only exist for the DeckBridge test harness — keep them out
   # of the Windows deploy.
   rm -f "$plugin_dir/hwinfo" "$plugin_dir/mock-bridge"

@@ -46,6 +46,15 @@ For Marketplace updates, write only the Windows-relevant delta since the current
 
 The moeilijk Marketplace listing "HWiNFO" is live (published 31 July 2026 at version 3.1.1). Look up its version on its product page (Version and "Last Updated" fields) and write the Marketplace changelog as the Windows-relevant delta since that version. The older "HWiNFO" listing on the Marketplace belongs to the exension maker account and is not ours: never write changelogs against it or propose releasing under its identity.
 
+## Binaries
+
+Windows reputation services (Smart App Control, SmartScreen, Defender cloud protection) judge unsigned files by hash, so a release does not ship new hashes for `hwinfo.exe` and `hwinfo-bridge.exe` without a reason (issue #126).
+
+- Both binaries are built with `-trimpath -buildvcs=false`. The same source, dependencies and toolchain give the same bytes, whatever the build directory and whatever the commit. `make reproducible` checks this by building from two clones in different directories, one of them with an extra commit that touches no Go code; CI runs it on every push.
+- `make release` runs `scripts/release-binaries.sh` after `verify`. When the project's own Go code behind the two binaries is unchanged since the previous release tag, the script downloads that release and puts its binaries back in the plugin directory, byte for byte. Only the plugin files (manifest, Property Inspector, images) differ in such a release. The script prints which of the two happened, with the SHA-256 of both binaries, and fails when it should reuse the binaries but cannot download them.
+- Dependency and toolchain updates do not count as a reason by themselves. They stay on `main` and go out with the next release that changes the Go code. When one of them fixes a security issue that affects the plugin, release with `REBUILD_BINARIES=1 make release` and say so in the release notes.
+- Test files are not compiled into the binaries and never trigger a rebuild.
+
 ## Antivirus check
 
 Every packed artifact is scanned before it is published (issue #116). `make release` runs `make av-check` on the artifact it just packed; a detection fails the build, and the release must not be published until the cause is understood. `make av-check` can also be run on its own, and `scripts/av-check.sh <package>` on any package, for example a previously published asset after a definitions update.

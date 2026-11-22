@@ -1,5 +1,10 @@
 GOCMD=go
-GOBUILD=$(GOCMD) build
+# Release binaries must not depend on where or from which commit they are
+# built (#126): -trimpath drops the absolute source paths, -buildvcs=false
+# drops the commit stamp, so a commit that leaves the Go code alone leaves
+# the binaries byte for byte the same.
+GOBUILDFLAGS=-trimpath -buildvcs=false
+GOBUILD=$(GOCMD) build $(GOBUILDFLAGS)
 GOCLEAN=$(GOCMD) clean
 GOOS?=windows
 GOARCH?=amd64
@@ -51,7 +56,13 @@ verify:
 # Elgato: the Marketplace guidelines and distribution docs set no filename
 # rule, the CLI's <uuid>.streamDeckPlugin is only its default output name, and
 # Marketplace itself serves downloads with the version in the name.
-release: verify plugin
+#
+# The binaries in a release are the ones `verify` just built, unless the
+# project's own Go code is unchanged since the previous release: then
+# release-binaries.sh puts that release's binaries back, so the hashes stay
+# the same (#126). REBUILD_BINARIES=1 ships the fresh ones regardless.
+release: verify
+	bash scripts/release-binaries.sh
 	-@rm -f build/com.moeilijk.hwinfo.streamDeckPlugin build/com.moeilijk.hwinfo-[0-9]*.streamDeckPlugin
 	@rm -f $(SDPLUGINDIR)/hwinfo $(SDPLUGINDIR)/mock-bridge
 	streamdeck pack com.moeilijk.hwinfo.sdPlugin --output build --force
@@ -59,6 +70,11 @@ release: verify plugin
 	mv build/com.moeilijk.hwinfo.streamDeckPlugin "build/com.moeilijk.hwinfo-$$VER.streamDeckPlugin"; \
 	echo "artifact: build/com.moeilijk.hwinfo-$$VER.streamDeckPlugin"
 	$(MAKE) av-check
+
+# Builds both binaries from two clones of HEAD in different directories and
+# fails when they differ (#126).
+reproducible:
+	bash scripts/check-reproducible.sh
 
 # Antivirus check of the packed artifact (issue #116): the Microsoft Defender
 # engine with current definitions runs offline under wine64 and is the hard
