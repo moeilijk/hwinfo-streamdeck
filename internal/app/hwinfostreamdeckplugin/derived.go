@@ -17,6 +17,7 @@ const derivedAction = "com.moeilijk.hwinfo.derived"
 type derivedState struct {
 	graph            *graph.Graph
 	lastPollTime     uint64
+	unavailable      bool // placeholder is on the key because the source is gone
 	divisorCache     [8]divisorCacheEntry
 	tileDivisorCache divisorCacheEntry
 	smoothedValue    float64
@@ -180,6 +181,7 @@ func (p *Plugin) updateDerivedTile(ctx string) {
 
 	pollTime, err := p.getCachedPollTime()
 	if err != nil || pollTime == 0 || time.Since(time.Unix(0, int64(pollTime))) > 5*time.Second {
+		p.showTileUnavailable(ctx, &state.unavailable, &state.lastPollTime)
 		return
 	}
 	if pollTime == state.lastPollTime {
@@ -398,6 +400,7 @@ func (p *Plugin) updateDerivedTile(ctx string) {
 	p.mu.Lock()
 	if st, ok := p.derivedStates[ctx]; ok {
 		st.lastPollTime = pollTime
+		st.unavailable = false
 	}
 	if settings.UpdateIntervalOverrideMs > 0 {
 		p.lastRenderTime[ctx] = time.Now()

@@ -546,6 +546,25 @@ func (p *Plugin) getCachedDivisor(context, raw string) (float64, error) {
 	return fdiv, nil
 }
 
+// showTileUnavailable puts the chip placeholder on a Composite or Derived key
+// while its source is gone, the same image a Reading tile falls back to. The
+// image is sent once per outage; lastPollTime is cleared so the tile renders
+// again on the first poll after the source returns (#127).
+func (p *Plugin) showTileUnavailable(ctx string, unavailable *bool, lastPollTime *uint64) {
+	p.mu.Lock()
+	first := !*unavailable
+	*unavailable = true
+	*lastPollTime = 0
+	p.mu.Unlock()
+
+	if !first || len(p.placeholderImage) == 0 {
+		return
+	}
+	if err := p.sd.SetImage(ctx, p.placeholderImage); err != nil {
+		log.Printf("Failed to setImage: %v\n", err)
+	}
+}
+
 func (p *Plugin) updateTiles(data *actionData) {
 	if data.action != "com.moeilijk.hwinfo.reading" {
 		log.Printf("Unknown action updateTiles: %s\n", data.action)

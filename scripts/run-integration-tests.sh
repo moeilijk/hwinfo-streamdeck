@@ -77,7 +77,8 @@ for TEST_FILE in \
   tests/integration/test-composite-global-suppress.js \
   tests/integration/test-settings-tile.js \
   tests/integration/test-favorites.js \
-  tests/integration/test-remote-sources.js; do
+  tests/integration/test-remote-sources.js \
+  tests/integration/test-source-gone.js; do
   echo ""
   echo "── $TEST_FILE ──"
   node "$TEST_FILE"

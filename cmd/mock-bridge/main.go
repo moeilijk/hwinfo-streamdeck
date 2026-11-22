@@ -9,6 +9,7 @@
 //	POST /reset — restore all defaults
 //	GET  /list — dump current readings
 //	POST /source {"id":"remote0","present":true,"available":true} — control the mock remote source
+//	POST /source {"id":"local","available":false} — stall local polling, as when HWiNFO is closed
 package main
 
 import (
@@ -100,6 +101,7 @@ var (
 	readings       = defaultReadings()
 	remoteReadings = defaultRemoteReadings()
 	remoteSource   = remoteSourceState{}
+	localStalled   bool // local source stopped polling (HWiNFO closed)
 )
 
 func readingID(sensorID, path string) int32 {
@@ -166,15 +168,28 @@ func (s source) Available() bool  { return s.available }
 type service struct{}
 
 func (service) PollTime() (uint64, error) {
-	return uint64(time.Now().UnixNano()), nil
+	return localPollTime(), nil
+}
+
+// localPollTime is now while the local source polls, and a minute old while
+// it is stalled, so the plugin's staleness gate reacts as with real HWiNFO.
+func localPollTime() uint64 {
+	now := uint64(time.Now().UnixNano())
+	mu.RLock()
+	defer mu.RUnlock()
+	if localStalled {
+		return now - uint64(time.Minute)
+	}
+	return now
 }
 
 func (service) Sources() ([]hwsensorsservice.Source, error) {
+	localNow := localPollTime()
 	mu.RLock()
 	defer mu.RUnlock()
 	now := uint64(time.Now().UnixNano())
 	out := []hwsensorsservice.Source{
-		source{id: hwsensorsservice.LocalSourceID, name: "Local", pollTime: now, available: true},
+		source{id: hwsensorsservice.LocalSourceID, name: "Local", pollTime: localNow, available: !localStalled},
 	}
 	if remoteSource.present {
 		pollTime := now
@@ -288,6 +303,13 @@ func handleSource(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	if req.ID == "local" {
+		mu.Lock()
+		localStalled = !req.Available
+		mu.Unlock()
+		fmt.Fprintf(w, `{"ok":true,"id":%q,"available":%t}`, req.ID, req.Available)
+		return
+	}
 	if req.ID != mockRemoteSourceID {
 		http.Error(w, "unknown source: "+req.ID, http.StatusNotFound)
 		return
@@ -307,6 +329,7 @@ func handleReset(w http.ResponseWriter, r *http.Request) {
 	readings = defaultReadings()
 	remoteReadings = defaultRemoteReadings()
 	remoteSource = remoteSourceState{}
+	localStalled = false
 	mu.Unlock()
 	fmt.Fprint(w, `{"ok":true}`)
 }

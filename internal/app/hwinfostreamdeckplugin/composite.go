@@ -42,6 +42,7 @@ var compositeSlotDefaults = [4]compositeSlotSettings{
 type compositeState struct {
 	graphs         [4]*graph.Graph
 	lastPollTime   uint64
+	unavailable    bool // placeholder is on the key because the source is gone
 	divisorCache   [4]divisorCacheEntry
 	smoothedValues [4]float64
 	smoothedInit   [4]bool
@@ -390,6 +391,7 @@ func (p *Plugin) updateCompositeTile(ctx string) {
 
 	pollTime, err := p.getCachedPollTime()
 	if err != nil || pollTime == 0 || time.Since(time.Unix(0, int64(pollTime))) > 5*time.Second {
+		p.showTileUnavailable(ctx, &state.unavailable, &state.lastPollTime)
 		return
 	}
 	if !forceUpdate && pollTime == state.lastPollTime {
@@ -530,6 +532,7 @@ func (p *Plugin) updateCompositeTile(ctx string) {
 	p.mu.Lock()
 	if st, ok5 := p.compositeStates[ctx]; ok5 {
 		st.lastPollTime = pollTime
+		st.unavailable = false
 	}
 	if settings.UpdateIntervalOverrideMs > 0 {
 		p.lastRenderTime[ctx] = time.Now()
