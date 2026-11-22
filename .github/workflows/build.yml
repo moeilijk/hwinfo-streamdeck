@@ -34,6 +34,10 @@ jobs:
       - name: make reproducible
         run: make reproducible
 
+      - name: Build in the pinned release environment
+        # Prints the hashes a release built from this commit would get (#126).
+        run: bash scripts/build-release-binaries.sh --out "$RUNNER_TEMP/release-binaries"
+
   govulncheck:
     runs-on: ubuntu-latest
     steps:

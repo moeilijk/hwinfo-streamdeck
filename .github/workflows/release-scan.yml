@@ -1,11 +1,13 @@
 name: Release scan
 
-# The binaries of the latest release are reused by later releases as long as
-# the Go code does not change (#126), so they age while main moves on. This
-# job downloads the published release, checks its binaries against the hashes
-# recorded in release-hashes.txt and scans them with govulncheck. A failure
-# means the published binaries no longer match the record or contain a known
-# vulnerability, and a new release is due.
+# Published binaries are reused by later releases as long as the Go code does
+# not change (#126), so they age while main moves on. Every week this checks
+# what is actually in users' hands:
+#   latest       the latest GitHub release: recorded hashes and govulncheck
+#   marketplace  the same for the version in marketplace-version.txt
+#   provenance   rebuilds the latest release from its tag and compares
+#   builder      newer mingw-w64 packages than the pinned build environment
+# A failing job means a new release is due, or the record does not match.
 
 permissions:
   contents: read
@@ -16,19 +18,56 @@ on:
   workflow_dispatch:
 
 jobs:
-  scan:
+  latest:
+    name: Latest release
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
-
       - name: Install govulncheck
         run: go install golang.org/x/vuln/cmd/govulncheck@latest
-
       - name: Scan the latest release
         env:
           GH_TOKEN: ${{ github.token }}
         run: bash scripts/scan-release.sh
+
+  marketplace:
+    name: Marketplace version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+      - name: Scan the version published on the Marketplace
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/scan-release.sh "$(cat marketplace-version.txt)"
+
+  provenance:
+    name: Rebuild the latest release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - name: Rebuild from the tag and compare with release-hashes.txt
+        run: |
+          status=0
+          bash scripts/verify-release.sh || status=$?
+          # 2: the release predates the pinned build environment.
+          if [ "$status" = "2" ]; then exit 0; fi
+          exit "$status"
+
+  builder:
+    name: Build environment updates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Compare the pinned mingw-w64 packages with the Ubuntu archive
+        run: bash scripts/check-builder-updates.sh

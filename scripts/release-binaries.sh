@@ -35,7 +35,7 @@ binaries=(hwinfo.exe hwinfo-bridge.exe)
 # report prints the hashes of what is in the plugin directory now and records
 # them for the version being released, unless that version is already tagged.
 report() {
-  local version tag tmp
+  local built="${1:-}" version tag tmp
   for bin in "${binaries[@]}"; do
     echo "  $bin $(sha256sum "$plugin_dir/$bin" | cut -d' ' -f1)"
   done
@@ -45,10 +45,13 @@ report() {
     echo "  $tag is already tagged; release-hashes.txt left as it is"
     return
   fi
+  # Fresh binaries were built for this version; reused ones keep the
+  # release they were built for.
+  [[ -n "$built" ]] || built="$tag"
   tmp="$(mktemp)"
-  grep -v -E "  $tag/(hwinfo|hwinfo-bridge)\.exe\$" "$hashes_file" > "$tmp" || true
+  awk -v a="$tag/hwinfo.exe" -v b="$tag/hwinfo-bridge.exe" '$2 != a && $2 != b' "$hashes_file" > "$tmp" || true
   for bin in "${binaries[@]}"; do
-    echo "$(sha256sum "$plugin_dir/$bin" | cut -d' ' -f1)  $tag/$bin" >> "$tmp"
+    echo "$(sha256sum "$plugin_dir/$bin" | cut -d' ' -f1)  $tag/$bin  built:$built" >> "$tmp"
   done
   cat "$tmp" > "$hashes_file"
   rm -f "$tmp"
@@ -127,4 +130,5 @@ for bin in "${binaries[@]}"; do
 done
 
 echo "binaries: reused from $prev (own Go code unchanged, hashes verified, no known vulnerabilities)"
-report
+built="$(awk -v key="$prev/hwinfo.exe" '$2 == key { sub(/^built:/, "", $3); print $3 }' "$hashes_file" | head -n 1)"
+report "${built:-$prev}"

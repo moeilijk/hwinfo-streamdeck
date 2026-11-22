@@ -57,11 +57,15 @@ verify:
 # rule, the CLI's <uuid>.streamDeckPlugin is only its default output name, and
 # Marketplace itself serves downloads with the version in the name.
 #
-# The binaries in a release are the ones `verify` just built, unless the
-# project's own Go code is unchanged since the previous release: then
-# release-binaries.sh puts that release's binaries back, so the hashes stay
-# the same (#126). REBUILD_BINARIES=1 ships the fresh ones regardless.
+# The binaries in a release are built in the pinned environment of
+# scripts/release-builder (docker or podman), so they do not depend on the
+# compiler versions of the machine that releases. When the project's own Go
+# code is unchanged since the previous release, release-binaries.sh puts that
+# release's binaries back, after checking their hashes and scanning them, so
+# the hashes stay the same (#126). REBUILD_BINARIES=1 ships the fresh ones
+# regardless.
 release: verify
+	bash scripts/build-release-binaries.sh
 	bash scripts/release-binaries.sh
 	-@rm -f build/com.moeilijk.hwinfo.streamDeckPlugin build/com.moeilijk.hwinfo-[0-9]*.streamDeckPlugin
 	@rm -f $(SDPLUGINDIR)/hwinfo $(SDPLUGINDIR)/mock-bridge
@@ -75,6 +79,11 @@ release: verify
 # fails when they differ (#126).
 reproducible:
 	bash scripts/check-reproducible.sh
+
+# Rebuilds a published release from its tag in the pinned environment and
+# compares the binaries with release-hashes.txt: make verify-release TAG=v3.2.0
+verify-release:
+	bash scripts/verify-release.sh $(TAG)
 
 # Antivirus check of the packed artifact (issue #116): the Microsoft Defender
 # engine with current definitions runs offline under wine64 and is the hard

@@ -1,6 +1,11 @@
-# SHA-256 of the binaries shipped in each release (issue #126).
+# SHA-256 of the binaries shipped in each release (issue #126), and the
+# release they were built for. A release that reuses the binaries of an
+# earlier one names that earlier release as "built".
 # `make release` adds the lines for the version it packs; commit them with the
 # release. scripts/scan-release.sh checks a downloaded release against this
-# list before its binaries are scanned or reused.
-977263fd220d1130a4b19e2591b8f233a3b65f694cb8c31e4a1750c58d2ee240  v3.1.4/hwinfo.exe
-9c4f35a8ffb77edaab58f2087cf86bf22901f4068be9aefe59e93e3719ae7bf8  v3.1.4/hwinfo-bridge.exe
+# list before its binaries are scanned or reused, and scripts/verify-release.sh
+# rebuilds the "built" release and compares the result with it.
+f689f9038648822ec16c5f37a550dbf2cf2a71f09dbf697732158dbce62535a3  v3.1.1/hwinfo.exe  built:v3.1.1
+9c9fd9e8e9348512421b56dd92a713e7d32dafcab1ab6d0d45981503d7c321df  v3.1.1/hwinfo-bridge.exe  built:v3.1.1
+977263fd220d1130a4b19e2591b8f233a3b65f694cb8c31e4a1750c58d2ee240  v3.1.4/hwinfo.exe  built:v3.1.4
+9c4f35a8ffb77edaab58f2087cf86bf22901f4068be9aefe59e93e3719ae7bf8  v3.1.4/hwinfo-bridge.exe  built:v3.1.4
