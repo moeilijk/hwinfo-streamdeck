@@ -42,7 +42,8 @@ var compositeSlotDefaults = [4]compositeSlotSettings{
 type compositeState struct {
 	graphs         [4]*graph.Graph
 	lastPollTime   uint64
-	unavailable    bool // placeholder is on the key because the source is gone
+	unavailable    bool // placeholder is on the key because no slot has live data
+	piError        bool // the Property Inspector was told HWiNFO is unavailable
 	divisorCache   [4]divisorCacheEntry
 	smoothedValues [4]float64
 	smoothedInit   [4]bool
@@ -389,11 +390,22 @@ func (p *Plugin) updateCompositeTile(ctx string) {
 
 	forceUpdate := p.consumeThresholdDirty(ctx)
 
-	pollTime, err := p.getCachedPollTime()
-	if err != nil || pollTime == 0 || time.Since(time.Unix(0, int64(pollTime))) > 5*time.Second {
+	uids := make([]string, 0, settings.SlotCount)
+	for i := 0; i < settings.SlotCount; i++ {
+		if slot := &settings.Slots[i]; slot.IsValid && slot.SensorUID != "" {
+			uids = append(uids, slot.SensorUID)
+		}
+	}
+	sources := p.tileSourcesForUIDs(uids)
+	p.syncTilePIError(compositeAction, ctx, &state.piError, !sources.available && !sources.localFresh)
+	if !sources.available {
+		p.mu.Lock()
+		state.smoothedInit = [4]bool{}
+		p.mu.Unlock()
 		p.showTileUnavailable(ctx, &state.unavailable, &state.lastPollTime)
 		return
 	}
+	pollTime := sources.pollKey
 	if !forceUpdate && pollTime == state.lastPollTime {
 		return
 	}
@@ -421,10 +433,13 @@ func (p *Plugin) updateCompositeTile(ctx string) {
 			continue
 		}
 
-		// A remote source that vanished or stopped polling must not freeze
-		// the slot on its last value.
-		if !p.sourceFreshForUID(slot.SensorUID) {
+		// A source that vanished or stopped polling must not freeze the
+		// slot on its last value.
+		if _, fresh := p.freshPollTimeForUID(slot.SensorUID); !fresh {
 			displayTexts[i] = "—"
+			p.mu.Lock()
+			state.smoothedInit[i] = false
+			p.mu.Unlock()
 			continue
 		}
 

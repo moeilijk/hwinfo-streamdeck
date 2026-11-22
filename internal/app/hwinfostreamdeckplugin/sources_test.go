@@ -39,7 +39,7 @@ func TestPollTimeForUIDRoutesBySource(t *testing.T) {
 	}
 }
 
-func TestSourceFreshForUID(t *testing.T) {
+func TestFreshPollTimeForUID(t *testing.T) {
 	now := uint64(time.Now().UnixNano())
 	stale := uint64(time.Now().Add(-time.Minute).UnixNano())
 	p := pluginWithSources([]hwsensorsservice.Source{
@@ -47,19 +47,20 @@ func TestSourceFreshForUID(t *testing.T) {
 		stubSource{id: "remote1", pollTime: stale, available: true},
 	})
 
-	// Local uids are always fresh here: the tile-level local gate decides.
-	if !p.sourceFreshForUID("12345600") {
-		t.Error("local uid must be fresh")
+	// stubHardwareService reports local poll time 1: a local source that
+	// stopped polling is not fresh either.
+	if _, fresh := p.freshPollTimeForUID("12345600"); fresh {
+		t.Error("local uid with a stale poll time must not be fresh")
 	}
-	if !p.sourceFreshForUID("remote0::1") {
-		t.Error("recently polled remote source must be fresh")
+	if pt, fresh := p.freshPollTimeForUID("remote0::1"); !fresh || pt != now {
+		t.Errorf("recently polled remote source: pollTime = %d, fresh = %v; want %d, true", pt, fresh, now)
 	}
 	// A source that stopped polling (e.g. 12h shared-memory limit) must not
 	// keep feeding its last value.
-	if p.sourceFreshForUID("remote1::1") {
+	if _, fresh := p.freshPollTimeForUID("remote1::1"); fresh {
 		t.Error("stale remote source must not be fresh")
 	}
-	if p.sourceFreshForUID("remote9::1") {
+	if _, fresh := p.freshPollTimeForUID("remote9::1"); fresh {
 		t.Error("absent remote source must not be fresh")
 	}
 }

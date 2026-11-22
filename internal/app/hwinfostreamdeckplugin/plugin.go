@@ -322,21 +322,6 @@ func (p *Plugin) pollTimeForUID(uid string) (uint64, error) {
 	return 0, fmt.Errorf("source %s not present", sourceID)
 }
 
-// sourceFreshForUID reports whether a sensor UID's source is present,
-// available, and recently polled. Local UIDs are always fresh here: the
-// local staleness gate already runs at tile level.
-func (p *Plugin) sourceFreshForUID(uid string) bool {
-	sourceID, _ := hwsensorsservice.SplitSensorUID(uid)
-	if sourceID == hwsensorsservice.LocalSourceID {
-		return true
-	}
-	pollTime, err := p.pollTimeForUID(uid)
-	if err != nil || pollTime == 0 {
-		return false
-	}
-	return time.Since(time.Unix(0, int64(pollTime))) <= 5*time.Second
-}
-
 // startBridgeClient acquires rt.mu and starts the bridge.
 func (p *Plugin) startBridgeClient(rt *bridgeRuntime) error {
 	rt.mu.Lock()
@@ -546,10 +531,61 @@ func (p *Plugin) getCachedDivisor(context, raw string) (float64, error) {
 	return fdiv, nil
 }
 
+// sourceStaleAfter is how old a source's poll time may be before its values
+// count as gone.
+const sourceStaleAfter = 5 * time.Second
+
+// pollTimeFresh reports whether a poll time is set and recent.
+func pollTimeFresh(pollTime uint64) bool {
+	return pollTime != 0 && time.Since(time.Unix(0, int64(pollTime))) <= sourceStaleAfter
+}
+
+// freshPollTimeForUID returns the poll time of the source behind a sensor
+// UID, local or remote, and whether that source is present and still polling.
+func (p *Plugin) freshPollTimeForUID(uid string) (uint64, bool) {
+	pollTime, err := p.pollTimeForUID(uid)
+	if err != nil || !pollTimeFresh(pollTime) {
+		return 0, false
+	}
+	return pollTime, true
+}
+
+// tileSources is the availability of a multi-slot tile, judged on the sources
+// its own slots read (#141).
+type tileSources struct {
+	// available: at least one slot has a polling source. A tile without
+	// configured slots follows the local source.
+	available bool
+	// localFresh: the local HWiNFO itself is polling.
+	localFresh bool
+	// pollKey changes whenever one of the slot sources polls or drops out;
+	// it is what the tile compares against its last render.
+	pollKey uint64
+}
+
+// tileSourcesForUIDs judges the sources behind the configured slots of a
+// Composite or Derived tile.
+func (p *Plugin) tileSourcesForUIDs(uids []string) tileSources {
+	localPollTime, localFresh := p.freshPollTimeForUID("")
+	ts := tileSources{localFresh: localFresh}
+	if len(uids) == 0 {
+		ts.available = localFresh
+		ts.pollKey = localPollTime
+		return ts
+	}
+	for _, uid := range uids {
+		if pollTime, fresh := p.freshPollTimeForUID(uid); fresh {
+			ts.available = true
+			ts.pollKey += pollTime
+		}
+	}
+	return ts
+}
+
 // showTileUnavailable puts the chip placeholder on a Composite or Derived key
-// while its source is gone, the same image a Reading tile falls back to. The
-// image is sent once per outage; lastPollTime is cleared so the tile renders
-// again on the first poll after the source returns (#127).
+// that has no live data to show, the same image a Reading tile falls back to.
+// The image is sent once per outage; lastPollTime is cleared so the tile
+// renders again as soon as it has data (#127, #141).
 func (p *Plugin) showTileUnavailable(ctx string, unavailable *bool, lastPollTime *uint64) {
 	p.mu.Lock()
 	first := !*unavailable
@@ -562,6 +598,27 @@ func (p *Plugin) showTileUnavailable(ctx string, unavailable *bool, lastPollTime
 	}
 	if err := p.sd.SetImage(ctx, p.placeholderImage); err != nil {
 		log.Printf("Failed to setImage: %v\n", err)
+	}
+}
+
+// syncTilePIError tells the Property Inspector of a Composite or Derived tile
+// when HWiNFO went away and when it is back, as the Reading tile does. It
+// only reports an outage of HWiNFO itself: with a remote machine gone the
+// inspector stays usable, so the slot can be pointed at another source.
+func (p *Plugin) syncTilePIError(action, ctx string, piError *bool, want bool) {
+	p.mu.Lock()
+	changed := *piError != want
+	*piError = want
+	p.mu.Unlock()
+	if !changed {
+		return
+	}
+	payload := evStatus{Error: false, Message: "show_ui"}
+	if want {
+		payload = evStatus{Error: true, Message: "HWiNFO Unavailable"}
+	}
+	if err := p.sd.SendToPropertyInspector(action, ctx, payload); err != nil {
+		log.Println("syncTilePIError SendToPropertyInspector", err)
 	}
 }
 

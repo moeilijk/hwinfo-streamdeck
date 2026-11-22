@@ -1018,8 +1018,10 @@ func (p *Plugin) updateDialPage(ctx string, settings *dialActionSettings, state 
 
 	pageCtx := dialPageContext(ctx, index)
 	g := state.graphs[index]
+	// A poll time that stopped advancing is as gone as a missing one: the
+	// page must not keep rendering the last values (#141).
 	pollTime, err := p.pollTimeForUID(page.SensorUID)
-	if err != nil || pollTime == 0 {
+	if err != nil || !pollTimeFresh(pollTime) {
 		if active {
 			render.messageTitle = "HWiNFO Dial"
 			if sourceID, _ := hwsensorsservice.SplitSensorUID(page.SensorUID); sourceID != hwsensorsservice.LocalSourceID {

@@ -17,7 +17,8 @@ const derivedAction = "com.moeilijk.hwinfo.derived"
 type derivedState struct {
 	graph            *graph.Graph
 	lastPollTime     uint64
-	unavailable      bool // placeholder is on the key because the source is gone
+	unavailable      bool // placeholder is on the key because there is no live value to show
+	piError          bool // the Property Inspector was told HWiNFO is unavailable
 	divisorCache     [8]divisorCacheEntry
 	tileDivisorCache divisorCacheEntry
 	smoothedValue    float64
@@ -179,11 +180,31 @@ func (p *Plugin) updateDerivedTile(ctx string) {
 		return
 	}
 
-	pollTime, err := p.getCachedPollTime()
-	if err != nil || pollTime == 0 || time.Since(time.Unix(0, int64(pollTime))) > 5*time.Second {
+	uids := make([]string, 0, settings.SlotCount)
+	for i := 0; i < settings.SlotCount; i++ {
+		if slot := &settings.Slots[i]; slot.IsValid && slot.SensorUID != "" {
+			uids = append(uids, slot.SensorUID)
+		}
+	}
+	// unavailable drops the smoothing history with the stale value and puts
+	// the placeholder on the key.
+	unavailable := func() {
+		p.mu.Lock()
+		state.smoothedInit = false
+		p.mu.Unlock()
 		p.showTileUnavailable(ctx, &state.unavailable, &state.lastPollTime)
+	}
+	sources := p.tileSourcesForUIDs(uids)
+	p.syncTilePIError(derivedAction, ctx, &state.piError, !sources.available && !sources.localFresh)
+	if !sources.available {
+		unavailable()
 		return
 	}
+	if len(uids) < 2 {
+		// Not configured far enough to compute anything; nothing went away.
+		return
+	}
+	pollTime := sources.pollKey
 	if pollTime == state.lastPollTime {
 		return
 	}
@@ -206,9 +227,9 @@ func (p *Plugin) updateDerivedTile(ctx string) {
 		if !slot.IsValid || slot.SensorUID == "" {
 			continue
 		}
-		// A remote source that vanished or stopped polling must not feed
-		// the formula its last frozen value.
-		if !p.sourceFreshForUID(slot.SensorUID) {
+		// A source that vanished or stopped polling must not feed the
+		// formula its last frozen value.
+		if _, fresh := p.freshPollTimeForUID(slot.SensorUID); !fresh {
 			continue
 		}
 		r, _, err := p.getReading(slot.SensorUID, slot.ReadingID)
@@ -250,12 +271,16 @@ func (p *Plugin) updateDerivedTile(ctx string) {
 		}
 	}
 
+	// Too few live values, or a formula that cannot be computed: the last
+	// rendered value is no longer true, so it must not stay on the key.
 	if len(values) < 2 {
+		unavailable()
 		return
 	}
 
 	aggregated, ok := computeDerived(settings.Formula, values)
 	if !ok {
+		unavailable()
 		return
 	}
 

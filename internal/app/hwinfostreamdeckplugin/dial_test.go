@@ -730,7 +730,6 @@ func TestDrawDialVerticalIndicatorHonoursExplicitChoice(t *testing.T) {
 	}
 }
 
-
 func TestDrawDialPageIndicatorUsesDotsForSmallPageCounts(t *testing.T) {
 	img := image.NewRGBA(image.Rect(0, 0, dialWidth, dialHeight))
 	fillRect(img, img.Bounds(), color.RGBA{0, 0, 0, 255})
@@ -914,6 +913,7 @@ func TestUpdateDialPageDrawsFullscreenIndicatorOnlyWhenEnabled(t *testing.T) {
 		}
 		p.bridge = &bridgeRuntime{
 			hw: stubHardwareService{
+				pollTime: uint64(time.Now().UnixNano()),
 				readingsBySensor: map[string][]hwsensorsservice.Reading{
 					sensorUID: {stubReading{id: readingID, typ: "Load", label: "CPU Total", unit: "%"}},
 				},
@@ -1063,6 +1063,7 @@ func TestUpdateDialPageKeepsSnoozeWhenThresholdDrops(t *testing.T) {
 	}
 	p.bridge = &bridgeRuntime{
 		hw: stubHardwareService{
+			pollTime: uint64(time.Now().UnixNano()),
 			readingsBySensor: map[string][]hwsensorsservice.Reading{
 				sensorUID: {
 					stubReading{id: readingID, typ: "Load", label: "CPU Total", unit: "%"},
@@ -1123,6 +1124,7 @@ func newBringToFrontPlugin(bringToFront bool) (*Plugin, *dialActionSettings, *di
 	}
 	p.bridge = &bridgeRuntime{
 		hw: stubHardwareService{
+			pollTime: uint64(time.Now().UnixNano()),
 			readingsBySensor: map[string][]hwsensorsservice.Reading{
 				sensorUID: {stubReading{id: readingID, typ: "Load", label: "CPU Total", unit: "%"}},
 			},
