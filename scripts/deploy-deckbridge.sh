@@ -22,23 +22,22 @@ echo "build: $plugin_src/hwinfo + mock-bridge (linux)"
 )
 
 # ── stop existing DeckBridge daemon ────────────────────────────────────────
-echo "kill: DeckBridge + plugin processes"
-# DeckBridge installs a SIGTERM handler that does not reliably exit, so a plain
-# pkill (SIGTERM) leaves the old daemon alive; the next start then dies on
-# EADDRINUSE and the stale daemon keeps serving OLD code. Use SIGKILL.
-# Also: the real process is launched as "node dist/index.js" (cwd is the
-# DeckBridge dir, which is NOT part of the command line), so the historical
-# "node.*DeckBridge" pattern never matched it. Match the entry script instead.
-pkill -9 -f "dist/index.js"        2>/dev/null || true
-pkill -9 -f "sdPlugin/hwinfo"      2>/dev/null || true
-pkill -9 -f "sdPlugin/mock-bridge" 2>/dev/null || true
+echo "stop: DeckBridge and everything it started"
+# stop-deckbridge.sh finds the processes through /proc (working directory and
+# executable, not command lines) and also stops the helpers of the other
+# plugins DeckBridge loads. It uses SIGKILL and fails when a process or the
+# daemon port survives, so a stale daemon can never keep serving old code.
+# The two executables are named as well for the layout where the plugin
+# directory of DeckBridge is a symlink to this checkout.
+bash "$root_dir/scripts/stop-deckbridge.sh" "$plugin_src/hwinfo" "$plugin_src/mock-bridge"
 
-# Wait until port 34075 is actually free before starting, so we never race a
-# half-dead daemon into EADDRINUSE.
-for _ in $(seq 1 20); do
-  if ! ss -ltn 2>/dev/null | grep -q ':34075 '; then break; fi
-  sleep 0.5
-done
+# A bridge that outlives its plugin keeps the control port: the new bridge
+# then cannot bind it, and the tests steer the old one while the plugin reads
+# the new one.
+if ss -ltn 2>/dev/null | grep -q ":${MOCK_CONTROL_PORT:-9999} "; then
+  echo "ERROR: port ${MOCK_CONTROL_PORT:-9999} is still in use; the mock-bridge control API cannot start" >&2
+  exit 1
+fi
 
 # ── deploy plugin files ────────────────────────────────────────────────────
 echo "copy: $plugin_src -> $plugin_dst"

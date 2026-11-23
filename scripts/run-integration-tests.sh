@@ -26,10 +26,15 @@ cleanup() {
   echo ""
   echo "── cleanup ──"
   if [[ "$KEEP_ALIVE" == "false" ]]; then
-    pkill -9 -f "dist/index.js" 2>/dev/null || true
-    pkill -9 -f "sdPlugin/hwinfo" 2>/dev/null || true
-    pkill -9 -f "sdPlugin/mock-bridge" 2>/dev/null || true
-    echo "DeckBridge stopped"
+    # Stops the daemon, the plugins it loaded and their helpers (mock-bridge),
+    # also those of other plugins: a helper left running keeps its port.
+    if bash "$SCRIPT_DIR/stop-deckbridge.sh" \
+      "$ROOT/com.moeilijk.hwinfo.sdPlugin/hwinfo" \
+      "$ROOT/com.moeilijk.hwinfo.sdPlugin/mock-bridge"; then
+      echo "DeckBridge stopped"
+    else
+      echo "WARNING: DeckBridge cleanup left something running (see above)"
+    fi
   else
     echo "DeckBridge kept alive (--keep-alive)"
   fi
@@ -78,11 +83,14 @@ for TEST_FILE in \
   tests/integration/test-settings-tile.js \
   tests/integration/test-favorites.js \
   tests/integration/test-remote-sources.js \
-  tests/integration/test-source-gone.js; do
+  tests/integration/test-source-gone.js \
+  tests/integration/test-reading-options.js; do
   echo ""
   echo "── $TEST_FILE ──"
-  node "$TEST_FILE"
-  FILE_EXIT=$?
+  # "|| FILE_EXIT=$?" keeps set -e from aborting the run at the first failing
+  # suite, so the suites after it still run and get reported.
+  FILE_EXIT=0
+  node "$TEST_FILE" || FILE_EXIT=$?
   if [[ $FILE_EXIT -ne 0 ]]; then
     OVERALL_EXIT=$FILE_EXIT
     echo "FAILED: $TEST_FILE (exit $FILE_EXIT)"

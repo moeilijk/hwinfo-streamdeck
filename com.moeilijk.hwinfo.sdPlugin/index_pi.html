@@ -165,6 +165,68 @@
       </div>
 
       <div class="sdpi-item">
+        <div class="sdpi-item-label">Unit</div>
+        <select class="sdpi-item-value select" id="unitDisplay">
+          <option value="inline">Next to value</option>
+          <option value="below">Below value</option>
+          <option value="hidden">Hidden</option>
+        </select>
+      </div>
+
+      <div type="range" class="sdpi-item" id="unitFontSize">
+        <div class="sdpi-item-label">Unit size</div>
+        <div class="sdpi-item-value">
+          <span value="8">8</span>
+          <div class="range-wrap">
+            <span class="range-val">10.5</span>
+            <input type="range" min="8" max="20" step="0.5" value="10.5" />
+          </div>
+          <span value="20">20</span>
+        </div>
+      </div>
+
+      <div type="range" class="sdpi-item" id="unitOffset">
+        <div class="sdpi-item-label">Unit offset</div>
+        <div class="sdpi-item-value">
+          <span value="-20">-20</span>
+          <div class="range-wrap">
+            <span class="range-val">0</span>
+            <input type="range" min="-20" max="20" step="0.5" value="0" />
+          </div>
+          <span value="20">20</span>
+        </div>
+      </div>
+
+      <div type="color" class="sdpi-item" id="unitTextColorRow">
+        <div class="sdpi-item-label">Unit color</div>
+        <input type="color" class="sdpi-item-value" id="unitTextColor" value="#ffffff" />
+      </div>
+
+      <div type="range" class="sdpi-item" id="valueOffset">
+        <div class="sdpi-item-label">Value offset</div>
+        <div class="sdpi-item-value">
+          <span value="-20">-20</span>
+          <div class="range-wrap">
+            <span class="range-val">0</span>
+            <input type="range" min="-20" max="20" step="0.5" value="0" />
+          </div>
+          <span value="20">20</span>
+        </div>
+      </div>
+
+      <div type="range" class="sdpi-item" id="lineSpacing">
+        <div class="sdpi-item-label">Line spacing</div>
+        <div class="sdpi-item-value">
+          <span value="0.5">0.5</span>
+          <div class="range-wrap">
+            <span class="range-val">1</span>
+            <input type="range" min="0.5" max="2" step="0.1" value="1" />
+          </div>
+          <span value="2">2</span>
+        </div>
+      </div>
+
+      <div class="sdpi-item">
         <div class="sdpi-item-label">Display</div>
         <select class="sdpi-item-value select" id="graphMode">
           <option value="both">Both</option>
@@ -195,6 +257,33 @@
           </div>
           <span value="4">4</span>
         </div>
+      </div>
+
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Graph style</div>
+        <select class="sdpi-item-value select" id="graphStyle">
+          <option value="classic">Classic</option>
+          <option value="soft">Soft</option>
+          <option value="soft-load">Soft spectrum</option>
+        </select>
+      </div>
+
+      <div class="sdpi-item show-label-row" id="condensedFontRow">
+        <div class="sdpi-item-label">Condensed font</div>
+        <div class="show-label-cell">
+          <input type="checkbox" class="show-label-checkbox" id="condensedFont" />
+        </div>
+        <div class="sdpi-item-label empty"></div>
+        <div class="show-label-cell show-label-cell-spacer" aria-hidden="true"></div>
+      </div>
+
+      <div class="sdpi-item show-label-row" id="textShadowRow">
+        <div class="sdpi-item-label">Text backdrop</div>
+        <div class="show-label-cell">
+          <input type="checkbox" class="show-label-checkbox" id="textShadow" />
+        </div>
+        <div class="sdpi-item-label empty"></div>
+        <div class="show-label-cell show-label-cell-spacer" aria-hidden="true"></div>
       </div>
 
       <div class="sdpi-item show-label-row" id="textStrokeRow">
@@ -257,6 +346,14 @@
 
     <details>
       <summary>Scale</summary>
+      <div class="sdpi-item">
+        <div class="sdpi-item-label">Range</div>
+        <select class="sdpi-item-value select" id="scaleMode">
+          <option value="manual">Manual</option>
+          <option value="auto">Auto (recent history)</option>
+          <option value="sensor">Sensor Min / Max</option>
+        </select>
+      </div>
 
       <div type="sdpi-item" class="sdpi-item" id="paramsgroup">
         <div class="sdpi-item-label">Min/Max</div>
@@ -267,6 +364,15 @@
           <input class="sdpi-item-value" style="margin-left: -7px; width:4em" placeholder=" Max" inputmode="numeric"
             pattern="[0-9]*" type="number" id="max" name="max" />
         </div>
+      </div>
+
+      <div class="sdpi-item show-label-row" id="resetMinMaxOnPressRow">
+        <div class="sdpi-item-label">Reset on press</div>
+        <div class="show-label-cell">
+          <input type="checkbox" class="show-label-checkbox" id="resetMinMaxOnPress" />
+        </div>
+        <div class="sdpi-item-label empty"></div>
+        <div class="show-label-cell show-label-cell-spacer" aria-hidden="true"></div>
       </div>
 
       <div class="sdpi-item" id="graphUnitContainer" style="display: none;">
@@ -296,6 +402,7 @@
               <a target="_BLANK" href="#"
                 onclick="openUrl('https://gobyexample.com/string-formatting'); return false;">click here</a>.
             </p>
+            <p>With Unit set to Below value or Hidden, leave the unit out of the format.</p>
           </details>
         </div>
 
@@ -476,8 +583,8 @@
     </template>
   </div>
   <!-- <script src="echomd.js"></script> -->
-  <script src="pi_utils.js?v=V5-prep.26"></script>
-  <script src="index_pi.js?v=V5-prep.26"></script>
+  <script src="pi_utils.js?v=V5-prep.27"></script>
+  <script src="index_pi.js?v=V5-prep.27"></script>
 </body>
 
 </html>

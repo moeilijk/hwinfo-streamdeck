@@ -24,8 +24,12 @@ import (
 type Label struct {
 	text     string
 	y        uint
+	offset   float64 // px added to the baseline, may be negative or fractional
 	fontSize float64
 	clr      *color.RGBA
+	// backdropGroup joins this label with others of the same non-zero group
+	// into one text backdrop. 0 = the label has a backdrop of its own.
+	backdropGroup int
 }
 
 // Graph is used to display a histogram of data passed to Update
@@ -38,7 +42,9 @@ type Graph struct {
 	min    int
 	max    int
 
-	yvals []uint8
+	style  string
+	yvals  []uint8
+	values []float64
 
 	fgColor *color.RGBA
 	bgColor *color.RGBA
@@ -47,14 +53,18 @@ type Graph struct {
 	labels          map[int]*Label
 	drawn           bool
 	redraw          bool
-	heightPct       int         // 10–100; 0 means 100
-	lineThickness   int         // 1–4; 0 means 1
+	heightPct       int // 10–100; 0 means 100
+	lineThickness   int // 1–4; 0 means 1
+	condensedFont   bool
+	textShadow      bool
+	lineSpacing     float64     // multiplier on the font line height; 0 means 1
 	textStroke      bool        // draw outline around labels
 	textStrokeColor *color.RGBA // nil = use bgColor
 }
 
 // FontFaceManager builds and caches fonts based on size
 type FontFaceManager struct {
+	fontData  []byte
 	mux       sync.Mutex
 	fontCache map[float64]font.Face
 }
@@ -65,15 +75,29 @@ func NewFontFaceManager() *FontFaceManager {
 }
 
 func (f *FontFaceManager) newFace(size float64) (font.Face, error) {
-	b, err := os.ReadFile("DejaVuSans-Bold.ttf")
-	if err != nil {
-		return nil, fmt.Errorf("read font: %w", err)
+	b := f.fontData
+	if b == nil {
+		var err error
+		b, err = os.ReadFile("DejaVuSans-Bold.ttf")
+		if err != nil {
+			return nil, fmt.Errorf("read font: %w", err)
+		}
 	}
 	tt, err := truetype.Parse(b)
 	if err != nil {
 		return nil, fmt.Errorf("parse font: %w", err)
 	}
 	return truetype.NewFace(tt, &truetype.Options{Size: size, DPI: 72}), nil
+}
+
+// SetFontData makes the manager build its faces from the given TTF bytes
+// instead of reading DejaVuSans-Bold.ttf from the working directory. Faces
+// built earlier are dropped.
+func (f *FontFaceManager) SetFontData(ttf []byte) {
+	f.mux.Lock()
+	defer f.mux.Unlock()
+	f.fontData = ttf
+	f.fontCache = make(map[float64]font.Face)
 }
 
 // GetFaceOfSize returns font face for given size
@@ -171,6 +195,15 @@ func (g *Graph) SetLineThickness(t int) {
 	g.redraw = true
 }
 
+// SetStyle selects an optional soft renderer. Unknown styles use the classic renderer.
+func (g *Graph) SetStyle(style string) {
+	if style != "soft" && style != "soft-load" {
+		style = "classic"
+	}
+	g.style = style
+	g.redraw = true
+}
+
 // SetTextStroke enables or disables an outline around labels.
 func (g *Graph) SetTextStroke(b bool) {
 	g.textStroke = b
@@ -183,12 +216,24 @@ func (g *Graph) SetTextStrokeColor(clr *color.RGBA) {
 
 // SetMin sets the min value for the graph scale
 func (g *Graph) SetMin(min int) {
-	g.min = min
+	g.SetRange(min, g.max)
 }
 
 // SetMax sets the max value for the graph scale
 func (g *Graph) SetMax(max int) {
-	g.max = max
+	g.SetRange(g.min, max)
+}
+
+// SetRange rescales stored samples so a changing scale does not distort history.
+func (g *Graph) SetRange(min, max int) {
+	if g.min == min && g.max == max {
+		return
+	}
+	g.min, g.max = min, max
+	for i, value := range g.values {
+		g.yvals[i] = uint8(vAsY(g.effectiveHeight()-1, value, min, max))
+	}
+	g.redraw = true
 }
 
 // SetLabel given a key, set the initial text, position and color
@@ -280,8 +325,16 @@ func (g *Graph) Update(value float64) {
 	if len(g.yvals) >= g.width {
 		_, a := g.yvals[0], g.yvals[1:]
 		g.yvals = a
+		g.values = g.values[1:]
 	}
 	g.yvals = append(g.yvals, uint8(vay))
+	g.values = append(g.values, value)
+	if g.style == "soft" || g.style == "soft-load" {
+		g.drawSoftGraph()
+		g.drawn = true
+		g.redraw = false
+		return
+	}
 
 	if g.redraw {
 		g.lvay = -1
@@ -319,9 +372,7 @@ func (g *Graph) Update(value float64) {
 // EncodePNG renders the current state of the graph
 func (g *Graph) EncodePNG() ([]byte, error) {
 	bak := append(g.img.Pix[:0:0], g.img.Pix...)
-	for _, l := range g.labels {
-		g.drawLabel(l)
-	}
+	g.drawLabels()
 	s := shared()
 	s.mu.Lock()
 	err := s.pngEnc.Encode(s.pngBuf, g.img)
@@ -402,9 +453,14 @@ func (g *Graph) Clear() {
 	}
 	g.drawn = false
 	g.yvals = g.yvals[:0]
+	g.values = g.values[:0]
 }
 
 func vAsY(maxY int, v float64, minV, maxV int) int {
+	if maxY <= 0 || maxV <= minV || math.IsNaN(v) {
+		return 0
+	}
+	v = math.Max(float64(minV), math.Min(float64(maxV), v))
 	r := maxV - minV
 	v1 := v - float64(minV)
 	yf := v1 / float64(r) * float64(maxY)
@@ -436,63 +492,6 @@ func printableLabelText(text string) string {
 		}
 		return r
 	}, text)
-}
-
-func (g *Graph) drawLabel(l *Label) {
-	sh := shared()
-	lines := newlineRegex.Split(printableLabelText(l.text), -1)
-	face, err := sh.fontFaceManager.GetFaceOfSize(l.fontSize)
-	if err != nil {
-		log.Printf("drawLabel font: %v", err)
-		return
-	}
-	curY := l.y - uint(10.5-float64(face.Metrics().Height.Round()))
-
-	for _, line := range lines {
-		var lwidth float64
-		for _, x := range line {
-			awidth, ok := safeGlyphAdvance(face, rune(x))
-			if !ok {
-				log.Println("drawLabel: Failed to GlyphAdvance")
-				return
-			}
-			lwidth += unfix(awidth)
-		}
-
-		lx := (float64(g.width) / 2.) - (lwidth / 2.)
-		point := fixed.Point26_6{X: fixed.Int26_6(lx * 64), Y: fixed.Int26_6(curY * 64)}
-
-		d := &font.Drawer{
-			Dst:  g.img,
-			Src:  image.NewUniform(l.clr),
-			Face: face,
-			Dot:  point,
-		}
-		if g.textStroke {
-			strokeClr := g.bgColor
-			if g.textStrokeColor != nil {
-				strokeClr = g.textStrokeColor
-			}
-			strokeSrc := image.NewUniform(strokeClr)
-			for dy := -1; dy <= 1; dy++ {
-				for dx := -1; dx <= 1; dx++ {
-					if dx == 0 && dy == 0 {
-						continue
-					}
-					d.Src = strokeSrc
-					d.Dot = fixed.Point26_6{
-						X: point.X + fixed.Int26_6(dx*64),
-						Y: point.Y + fixed.Int26_6(dy*64),
-					}
-					safeDrawString(d, line)
-				}
-			}
-			d.Src = image.NewUniform(l.clr)
-			d.Dot = point
-		}
-		safeDrawString(d, line)
-		curY += 12
-	}
 }
 
 func safeGlyphAdvance(face font.Face, r rune) (advance fixed.Int26_6, ok bool) {

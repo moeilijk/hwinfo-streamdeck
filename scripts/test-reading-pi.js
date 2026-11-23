@@ -393,6 +393,73 @@ function testDerivedApplySettingsClearsStaleBoundsAndKeepsZero() {
   assert(String(derivedMax.value) === "0", `expected derived max to keep zero, got ${derivedMax.value}`);
 }
 
+// Checkbox options of the reading tile (index_pi.js displayOptionCheckboxIds).
+const DISPLAY_OPTION_CHECKBOXES = ["resetMinMaxOnPress", "condensedFont", "textShadow"];
+
+function loadDisplayOptionSandbox(present) {
+  const boxes = {};
+  const querySelectors = {};
+  present.forEach((id) => {
+    boxes[id] = new FakeElement();
+    querySelectors["#" + id] = boxes[id];
+  });
+  const sent = [];
+  const sandbox = loadScriptSandbox("com.moeilijk.hwinfo.sdPlugin/index_pi.js", { querySelectors });
+  // index_pi.js declares these globals itself, so set them after loading it.
+  sandbox.uuid = "ctx-reading";
+  sandbox.actionInfo = { action: "com.moeilijk.hwinfo.reading" };
+  sandbox.websocket = { readyState: 1, send: (msg) => sent.push(JSON.parse(msg)) };
+  return { sandbox, boxes, sent };
+}
+
+function testDisplayOptionCheckboxesRestoreFromSettings() {
+  const { sandbox, boxes } = loadDisplayOptionSandbox(DISPLAY_OPTION_CHECKBOXES);
+  assert(
+    JSON.stringify(Array.from(sandbox.displayOptionCheckboxIds)) === JSON.stringify(DISPLAY_OPTION_CHECKBOXES),
+    `unexpected option list: ${JSON.stringify(sandbox.displayOptionCheckboxIds)}`
+  );
+  DISPLAY_OPTION_CHECKBOXES.forEach((id) => {
+    const box = boxes[id];
+    sandbox.applyDisplayOptionSettings({});
+    assert(box.checked === false, `${id}: a tile without the setting must show it off`);
+    sandbox.applyDisplayOptionSettings({ [id]: true });
+    assert(box.checked === true, `${id}: saved true must check the box`);
+    sandbox.applyDisplayOptionSettings({ [id]: "true" });
+    assert(box.checked === false, `${id}: only boolean true counts as enabled`);
+    box.checked = true;
+    sandbox.applyDisplayOptionSettings({ [id]: false });
+    assert(box.checked === false, `${id}: saved false must clear a checked box`);
+    box.checked = true;
+    sandbox.applyDisplayOptionSettings(null);
+    assert(box.checked === false, `${id}: missing settings must clear the box`);
+  });
+}
+
+function testDisplayOptionCheckboxesSendPayload() {
+  const { sandbox, boxes, sent } = loadDisplayOptionSandbox(DISPLAY_OPTION_CHECKBOXES);
+  sandbox.bindDisplayOptionControls();
+  DISPLAY_OPTION_CHECKBOXES.forEach((id) => {
+    const box = boxes[id];
+    [true, false].forEach((state) => {
+      box.checked = state;
+      box.onchange.call(box);
+      const msg = sent[sent.length - 1];
+      assert(msg && msg.event === "sendToPlugin", `${id}: expected sendToPlugin`);
+      assert(msg.action === "com.moeilijk.hwinfo.reading" && msg.context === "ctx-reading", `${id}: wrong action/context`);
+      const c = msg.payload && msg.payload.sdpi_collection;
+      assert(c && c.key === id && c.checked === state, `${id}: unexpected payload ${JSON.stringify(msg.payload)}`);
+    });
+  });
+  assert(sent.length === DISPLAY_OPTION_CHECKBOXES.length * 2, `expected one message per change, got ${sent.length}`);
+}
+
+function testDisplayOptionControlsTolerateMissingElements() {
+  const { sandbox, sent } = loadDisplayOptionSandbox([]);
+  sandbox.applyDisplayOptionSettings({ resetMinMaxOnPress: true });
+  sandbox.bindDisplayOptionControls();
+  assert(sent.length === 0, "nothing must be sent when the controls are absent");
+}
+
 function main() {
   testNormalizeSnoozeDurations();
   testApplySnoozeDurationsToUI();
@@ -403,7 +470,10 @@ function main() {
   testDerivedReadingSortUsesNaturalLabelOrder();
   testCompositeApplySettingsClearsStaleBoundsAndKeepsZero();
   testDerivedApplySettingsClearsStaleBoundsAndKeepsZero();
-  process.stdout.write("reading-pi tests ok (9 cases)\n");
+  testDisplayOptionCheckboxesRestoreFromSettings();
+  testDisplayOptionCheckboxesSendPayload();
+  testDisplayOptionControlsTolerateMissingElements();
+  process.stdout.write("reading-pi tests ok (12 cases)\n");
 }
 
 main();

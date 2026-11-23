@@ -40,6 +40,8 @@ if node -e "require('../DeckBridge/node_modules/jsdom')" >/dev/null 2>&1 \
   node scripts/test-dial-bulk-render.js
   echo "test: dial indicator-fullscreen render (jsdom, real CSS)"
   node scripts/test-dial-indicator-fullscreen-render.js
+  echo "test: reading options render (jsdom, real CSS)"
+  node scripts/test-reading-options-render.js
 else
   echo "skip: dial bulk render (jsdom not reachable)"
 fi

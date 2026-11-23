@@ -228,16 +228,22 @@ func (p *Plugin) OnWillAppear(event *streamdeck.EvWillAppear) {
 	g.SetLabelFontSize(1, vfSize)
 	g.SetLabel(2, "", 56, vtColor)
 	g.SetLabelFontSize(2, vfSize)
+	g.SetLabel(labelUnit, "", valueBaseline, vtColor)
 	if settings.GraphHeightPct > 0 {
 		g.SetHeightPct(settings.GraphHeightPct)
 	}
 	if settings.GraphLineThickness > 0 {
 		g.SetLineThickness(settings.GraphLineThickness)
 	}
+	g.SetStyle(settings.GraphStyle)
+	g.SetCondensedFont(settings.CondensedFont)
+	g.SetTextShadow(settings.TextShadow)
 	g.SetTextStroke(settings.TextStroke)
 	if settings.TextStrokeColor != "" {
 		g.SetTextStrokeColor(hexToRGBA(settings.TextStrokeColor))
 	}
+	applyTextLayout(g, &settings)
+	applyUnitTextColor(g, &settings)
 	if drawTitle {
 		g.SetLabelText(0, settings.Title)
 	}
@@ -321,6 +327,7 @@ func (p *Plugin) OnWillDisappear(event *streamdeck.EvWillDisappear) {
 	}
 	p.mu.Lock()
 	delete(p.graphs, event.Context)
+	delete(p.scaleResetAfter, event.Context)
 	delete(p.divisorCache, event.Context)
 	p.mu.Unlock()
 	p.clearThresholdRuntimeState(event.Context)
@@ -339,6 +346,10 @@ func (p *Plugin) OnKeyDown(event *streamdeck.EvKeyDown) {
 		return
 	}
 
+	if p.sourceResetSupported() && keyPressResetsMinMax(&settings) {
+		p.resetReadingScale(event.Context, settings)
+		return
+	}
 	if settings.CurrentThresholdID == "" {
 		return
 	}
@@ -513,7 +524,7 @@ func (p *Plugin) OnPropertyInspectorConnected(event *streamdeck.EvSendToPlugin) 
 	for _, s := range sensors {
 		evsensors = append(evsensors, sensorPayload(s.ID(), s.Name()))
 	}
-	payload := evSendSensorsPayload{Sensors: evsensors, Settings: &settings}
+	payload := evSendSensorsPayload{Sensors: evsensors, Settings: &settings, ResetSupported: p.sourceResetSupported()}
 	err = p.sd.SendToPropertyInspector(event.Action, event.Context, payload)
 	if err != nil {
 		log.Println("OnPropertyInspectorConnected SendToPropertyInspector", err)
@@ -869,7 +880,12 @@ func (p *Plugin) OnSendToPlugin(event *streamdeck.EvSendToPlugin) {
 			if err != nil {
 				log.Println("handleSetTitleFontSize", err)
 			}
-		case "graphHeightPct", "graphLineThickness", "textStroke", "textStrokeColor", "updateIntervalOverrideMs", "smoothingAlpha":
+		case "unitDisplay", "unitFontSize", "unitOffset", "unitTextColor", "valueOffset", "lineSpacing":
+			err := p.handleTextLayout(event, &sdpi)
+			if err != nil {
+				log.Println("handleTextLayout", err)
+			}
+		case "resetMinMaxOnPress", "scaleMode", "graphStyle", "condensedFont", "textShadow", "graphHeightPct", "graphLineThickness", "textStroke", "textStrokeColor", "updateIntervalOverrideMs", "smoothingAlpha":
 			err := p.handleGraphVisuals(event, &sdpi)
 			if err != nil {
 				log.Println("handleGraphVisuals", err)

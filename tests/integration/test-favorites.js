@@ -16,14 +16,18 @@ const KEY_SETTINGS = 8;  // settings tile for favorite removal
 const KEY_TILE_A   = 6;  // tile we save the favorite from
 const KEY_TILE_B   = 7;  // tile we apply the favorite to
 
-// Wait for a sendToPropertyInspector message containing pl.catalog
+// Take the next pl.catalog payload from the connection's buffer (see connectPI),
+// dropping everything before it. Reading from the buffer instead of attaching a
+// listener avoids missing a catalog that arrived before the test got to wait.
 // (favorites may be null when empty — Go marshals nil slice as null)
-function waitForCatalog(ws, timeoutMs = 8000) {
-  return waitForMessage(ws, msg => {
-    if (msg.event !== 'sendToPropertyInspector') return undefined;
-    const pl = msg.payload || {};
-    if (pl.catalog) return pl;
-  }, timeoutMs);
+async function waitForCatalog(ws, timeoutMs = 8000) {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const i = ws.piPayloads.findIndex(pl => pl.catalog);
+    if (i >= 0) return ws.piPayloads.splice(0, i + 1)[i];
+    if (Date.now() > deadline) throw new Error('waitForCatalog timeout');
+    await sleep(50);
+  }
 }
 
 async function run() {
@@ -43,22 +47,15 @@ async function run() {
 
   await sleep(1500);
 
-  // Remove any pre-existing favorites
-  {
-    const gs = readGlobalSettings();
-    if ((gs.favoriteReadings || []).length > 0) {
-      const { ws } = await connectPI(wsPort, settingsCtx, SETTINGS_ACTION);
-      for (const fav of gs.favoriteReadings) {
-        sendToPlugin(ws, settingsCtx, SETTINGS_ACTION, { sdpi_collection: { key: 'removeFavorite', value: fav.id } });
-        await sleep(150);
-      }
-      await sleep(300);
-      ws.close();
-    }
-  }
-
   // Configure tile A: CPU Package temp
   const { ws: wsA, payload: initA } = await connectPI(wsPort, ctxA, READING_ACTION);
+
+  // Remove favorites left behind by an aborted earlier run. This goes through
+  // tile A: removeFavorite needs action settings, which a settings tile lacks.
+  for (const stale of readGlobalSettings().favoriteReadings || []) {
+    sdpi(wsA, ctxA, READING_ACTION, 'removeFavorite', stale.id);
+    await sleep(150);
+  }
   const sensor = (initA.sensors || []).find(s => s.uid === '/mockcpu/0');
   if (!sensor) { wsA.close(); throw new Error('sensor /mockcpu/0 not found'); }
 
@@ -79,10 +76,10 @@ async function run() {
   // ── TEST 1: Toggle favorite (save) ──────────────────────────────────────────
   console.log('\n[test 1] toggle favorite — save');
 
-  const catalogAfterToggleP = waitForCatalog(wsA, 8000);
+  wsA.piPayloads.length = 0;
   sdpi(wsA, ctxA, READING_ACTION, 'toggleFavoriteCurrent', '');
-  const catalogAfterToggle = await catalogAfterToggleP;
-  const favorites = catalogAfterToggle.catalog.favorites;
+  const catalogAfterToggle = await waitForCatalog(wsA, 8000);
+  const favorites = catalogAfterToggle.catalog.favorites || [];
 
   if (favorites.length === 1) {
     pass('test 1a — 1 favorite after toggle');
@@ -144,9 +141,9 @@ async function run() {
   const catalogBeforeRemoveP = waitForCatalog(wsA2, 8000);
   await catalogBeforeRemoveP;  // consume initial catalog
 
-  const catalogAfterRemoveP = waitForCatalog(wsA2, 8000);
+  wsA2.piPayloads.length = 0;
   sdpi(wsA2, ctxA, READING_ACTION, 'removeFavorite', fav.id);
-  const catalogAfterRemove = await catalogAfterRemoveP;
+  const catalogAfterRemove = await waitForCatalog(wsA2, 8000);
 
   if ((catalogAfterRemove.catalog.favorites || []).length === 0) {
     pass('test 3 — favorites list empty after remove');

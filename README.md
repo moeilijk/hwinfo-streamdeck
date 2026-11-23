@@ -46,6 +46,19 @@ Pages can be added one at a time, or in bulk: **Bulk Add** creates many pages fr
 
 Every graph tile can render text only, graph only, or both. The graph can be confined to the bottom part of the tile, the line thickness is adjustable, and the title and value can be drawn with an outline stroke to stay readable on top of the graph. Each tile can override the global poll interval and smooth the displayed value (EMA); thresholds always evaluate the raw value, so smoothing never delays or masks alerts.
 
+The Sensor Reading tile has these further options:
+
+- **Graph style** – `Classic` is the filled graph the plugin has always drawn and stays the default. `Soft` draws a smoothed curve in the highlight colour with a fill in the foreground colour that fades toward the bottom. `Soft spectrum` draws the same curve over a fixed green, yellow and red gradient that the curve cuts off. The colours show the position within the graph range and say nothing about safe limits for the hardware. The soft styles smooth only the drawing (a five-sample filter, three pixels per reading, so a tile shows about 24 readings). The value on the tile and the alerts keep using the real readings.
+- **Unit** – where the unit of the reading goes. `Next to value` is the default (`1500 RPM` on one line). `Below value` draws the unit as its own element under the value, with its own **Unit size**, **Unit offset** and **Unit color**, so a large value can sit above a small unit. `Hidden` leaves the unit out. With a **Format** set, the format output is shown as typed, so leave the unit out of the format when the unit is below or hidden. While an alert shows its text, that text takes the place of the unit.
+- **Value offset** / **Unit offset** – move the value or the unit up or down, in steps of half a pixel.
+- **Line spacing** – distance between the lines of a multi-line value (a format such as `%.0f\nRPM`) as a multiple of the font's line height, and between the value and a unit below it.
+- **Condensed font** – draws the title, value, unit and alert text in Roboto Condensed Bold instead of DejaVu Sans Bold. More characters fit on a tile.
+- **Text backdrop** – draws a soft oval in the stroke colour (the background colour when none is set) behind the text, which keeps it readable on a busy graph.
+
+The **Scale** section sets the range of the graph:
+
+- **Range** – `Manual` uses the Min/Max fields. `Auto (recent history)` fits the range to the readings that are in the graph at that moment, with some padding. A tile holds 72 readings, about 72 seconds at one reading per second, and a longer **Update every** covers a longer period. `Sensor Min / Max` follows the MIN/MAX that the source has recorded for the selected sensor. Neither automatic mode says anything about safe limits for the hardware. The manual limits are kept when you switch modes, and the points already in the graph are redrawn when the range changes.
+
 ### Title behavior
 
 - By default the tile shows the reading label reported by HWiNFO inside the graph area.
@@ -163,3 +176,5 @@ Portions of this implementation and README were drafted with AI assistance and r
 ## License
 
 [GPL-3.0](LICENSE). The plugin was created by Shayne Sweeney and was originally unlicensed; he gave me permission to place it under GPL-3.0 when I took over maintenance in 2026.
+
+The plugin embeds the font Roboto Condensed Bold, which is licensed under the [Apache License 2.0](pkg/graph/fonts/LICENSE.txt). The license text ships with the plugin in `licenses/RobotoCondensed-LICENSE.txt`.

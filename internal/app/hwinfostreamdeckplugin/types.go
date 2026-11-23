@@ -39,6 +39,17 @@ type Threshold struct {
 }
 
 type actionSettings struct {
+	ResetMinMaxOnPress       bool    `json:"resetMinMaxOnPress"`
+	ScaleMode                string  `json:"scaleMode,omitempty"`     // empty/manual, auto, or sensor
+	GraphStyle               string  `json:"graphStyle,omitempty"`    // empty/classic, soft, or soft-load
+	CondensedFont            bool    `json:"condensedFont,omitempty"` // Roboto Condensed Bold instead of DejaVu Sans Bold
+	TextShadow               bool    `json:"textShadow,omitempty"`    // soft oval backdrop behind the text
+	UnitDisplay              string  `json:"unitDisplay,omitempty"`   // empty/inline, below, or hidden
+	UnitFontSize             float64 `json:"unitFontSize,omitempty"`  // 0 = follow valueFontSize
+	UnitOffset               float64 `json:"unitOffset,omitempty"`    // px shift of the unit baseline
+	UnitTextColor            string  `json:"unitTextColor,omitempty"` // empty = follow the value colour
+	ValueOffset              float64 `json:"valueOffset,omitempty"`   // px shift of the value baseline
+	LineSpacing              float64 `json:"lineSpacing,omitempty"`   // multiplier on the line height, 0 = 1
 	SensorUID                string  `json:"sensorUid"`
 	ReadingID                int32   `json:"readingId,string"`
 	ReadingLabel             string  `json:"readingLabel"`
@@ -124,6 +135,9 @@ type evSendSensorsPayloadSensor struct {
 type evSendSensorsPayload struct {
 	Sensors  []*evSendSensorsPayloadSensor `json:"sensors"`
 	Settings *actionSettings               `json:"settings"`
+	// ResetSupported tells the inspector whether the sensor source can reset
+	// MIN/MAX, so it only offers "Reset on press" where a press can do it.
+	ResetSupported bool `json:"resetSupported"`
 }
 
 type evSendReadingsPayloadReading struct {

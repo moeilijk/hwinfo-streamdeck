@@ -10,6 +10,7 @@
 //	GET  /list — dump current readings
 //	POST /source {"id":"remote0","present":true,"available":true} — control the mock remote source
 //	POST /source {"id":"local","available":false} — stall local polling, as when HWiNFO is closed
+//	POST /minmax {"path":"/mockcpu/0/load/0","min":40,"max":60} — set the MIN/MAX a reading reports
 package main
 
 import (
@@ -334,6 +335,34 @@ func handleReset(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, `{"ok":true}`)
 }
 
+// handleMinMax sets the MIN/MAX a local reading reports, the range HWiNFO
+// records for a sensor since its last reset.
+func handleMinMax(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "POST only", http.StatusMethodNotAllowed)
+		return
+	}
+	var req struct {
+		Path string  `json:"path"`
+		Min  float64 `json:"min"`
+		Max  float64 `json:"max"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	mu.Lock()
+	rd, ok := readings[req.Path]
+	if !ok {
+		mu.Unlock()
+		http.Error(w, "unknown path: "+req.Path, http.StatusNotFound)
+		return
+	}
+	rd.min, rd.max = req.Min, req.Max
+	mu.Unlock()
+	fmt.Fprintf(w, `{"ok":true,"path":%q,"min":%g,"max":%g}`, req.Path, req.Min, req.Max)
+}
+
 func handleList(w http.ResponseWriter, _ *http.Request) {
 	mu.RLock()
 	out := make([]map[string]interface{}, 0, len(readings))
@@ -345,6 +374,8 @@ func handleList(w http.ResponseWriter, _ *http.Request) {
 			"type":    rd.typ,
 			"unit":    rd.unit,
 			"current": rd.cur,
+			"min":     rd.min,
+			"max":     rd.max,
 			"default": rd.defVal,
 		})
 	}
@@ -363,6 +394,7 @@ func main() {
 	mux.HandleFunc("/reset", handleReset)
 	mux.HandleFunc("/list", handleList)
 	mux.HandleFunc("/source", handleSource)
+	mux.HandleFunc("/minmax", handleMinMax)
 	go func() {
 		// The control server is best-effort: a bind failure (port in use after a
 		// bridge restart) must not take down the gRPC side.

@@ -160,6 +160,12 @@ function connectElgatoStreamDeckSocket(inPort, inUUID, inRegisterEvent, inInfo, 
       if (ghpInp) { ghpInp.value = settings.graphHeightPct || 100; positionRangeVal(ghpInp); }
       var gltInp = document.querySelector("#graphLineThickness input[type=range]");
       if (gltInp) { gltInp.value = settings.graphLineThickness || 1; positionRangeVal(gltInp); }
+      applyDisplayOptionSettings(settings);
+      // Only the plugin's answer to a connect carries resetSupported. Other
+      // messages with settings say nothing about the source.
+      if (typeof jsonObj.payload.resetSupported === "boolean") {
+        setResetSupported(jsonObj.payload.resetSupported);
+      }
       var tsEl = document.querySelector("#textStroke");
       if (tsEl) { tsEl.checked = settings.textStroke === true; }
       var tscEl = document.querySelector("#textStrokeColor");
@@ -410,14 +416,98 @@ function initPropertyInspector(initDelay) {
   prepareDOMElements(document);
 }
 
+// Checkbox options of the reading tile whose element id equals their settings key.
+var displayOptionCheckboxIds = ["resetMinMaxOnPress", "condensedFont", "textShadow"];
+
+// Select options of the reading tile, keyed by element id (= settings key), with
+// the value shown when the setting is absent.
+var displayOptionSelectDefaults = { scaleMode: "manual", graphStyle: "classic", unitDisplay: "inline" };
+
+// Range options of the reading tile, keyed by the id of their row (= settings
+// key), with the value shown when the setting is absent. unitFontSize has no
+// fixed fallback: an unset unit size follows the value size.
+var displayOptionRangeDefaults = { unitOffset: 0, valueOffset: 0, lineSpacing: 1 };
+
+// applyDisplayOptionSettings shows the saved options in their controls.
+function applyDisplayOptionSettings(settings) {
+  settings = settings || {};
+  displayOptionCheckboxIds.forEach(function(id) {
+    var el = document.querySelector("#" + id);
+    if (el) { el.checked = settings[id] === true; }
+  });
+  Object.keys(displayOptionSelectDefaults).forEach(function(id) {
+    setSelectValue(id, settings[id] || displayOptionSelectDefaults[id]);
+  });
+  Object.keys(displayOptionRangeDefaults).forEach(function(id) {
+    setDisplayOptionRange(id, settings[id] || displayOptionRangeDefaults[id]);
+  });
+  setDisplayOptionRange("unitFontSize", settings.unitFontSize || settings.valueFontSize || 10.5);
+  var unitColor = document.querySelector("#unitTextColor");
+  if (unitColor) { unitColor.value = settings.unitTextColor || settings.valueTextColor || "#ffffff"; }
+  updateScaleModeControls();
+  updateUnitControls();
+}
+
+// setResetSupported shows "Reset on press" only when the plugin reports that
+// the sensor source can reset a sensor's MIN/MAX.
+function setResetSupported(supported) {
+  var row = document.querySelector("#resetMinMaxOnPressRow");
+  if (row) { row.style.display = supported ? "" : "none"; }
+}
+
+function setDisplayOptionRange(id, value) {
+  var inp = document.querySelector("#" + id + " input[type=range]");
+  if (inp) { inp.value = value; positionRangeVal(inp); }
+}
+
+// updateUnitControls shows the unit's own size, offset and colour only while
+// the unit is drawn as its own element below the value.
+function updateUnitControls() {
+  var mode = document.querySelector("#unitDisplay");
+  if (!mode) { return; }
+  ["unitFontSize", "unitOffset", "unitTextColorRow"].forEach(function(id) {
+    var row = document.querySelector("#" + id);
+    if (row) { row.style.display = mode.value === "below" ? "" : "none"; }
+  });
+}
+
+// updateScaleModeControls hides the manual Min/Max inputs while the range is
+// derived automatically. The stored manual limits are kept for switching back.
+function updateScaleModeControls() {
+  var mode = document.querySelector("#scaleMode");
+  var manual = document.querySelector("#paramsgroup");
+  if (!mode || !manual) { return; }
+  manual.style.display = (mode.value === "auto" || mode.value === "sensor") ? "none" : "";
+}
+
+// bindDisplayOptionControls sends an option to the plugin when its control changes.
+// The selects are sent by the generic sdpi change handling; only their effect on
+// the other controls is wired here.
+function bindDisplayOptionControls() {
+  // Hidden until the plugin says the source can reset, see setResetSupported.
+  setResetSupported(false);
+  displayOptionCheckboxIds.forEach(function(id) {
+    var el = document.querySelector("#" + id);
+    if (!el) { return; }
+    el.onchange = function() {
+      sendValueToPlugin({ key: id, value: "", checked: this.checked }, "sdpi_collection");
+    };
+  });
+  var mode = document.querySelector("#scaleMode");
+  if (mode) { mode.addEventListener("change", updateScaleModeControls); }
+  var unitMode = document.querySelector("#unitDisplay");
+  if (unitMode) { unitMode.addEventListener("change", updateUnitControls); }
+}
+
 function wireRangeDisplays() {
-  ["titleFontSize", "valueFontSize", "graphHeightPct", "graphLineThickness", "smoothingAlpha"].forEach(function(id) {
+  ["titleFontSize", "valueFontSize", "unitFontSize", "unitOffset", "valueOffset", "lineSpacing", "graphHeightPct", "graphLineThickness", "smoothingAlpha"].forEach(function(id) {
     var inp = document.querySelector("#" + id + " input[type=range]");
     if (inp) {
       positionRangeVal(inp);
       inp.oninput = function() { positionRangeVal(this); };
     }
   });
+  bindDisplayOptionControls();
   var textStrokeEl = document.querySelector("#textStroke");
   if (textStrokeEl) {
     textStrokeEl.onchange = function() {

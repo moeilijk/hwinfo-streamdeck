@@ -54,10 +54,15 @@ function connectPI(wsPort, context, action) {
     const timer = setTimeout(() => reject(new Error(`timeout connecting PI context=${context}`)), 10000);
     ws.on('error', e => { clearTimeout(timer); reject(e); });
     ws.on('open', () => ws.send(JSON.stringify({ event: 'registerPropertyInspector', uuid: context })));
+    // Every PI payload is also buffered on ws.piPayloads, so a test can pick up
+    // a message that arrived before it had a chance to attach its own listener
+    // (the first catalog can land in the same tick as the connect response).
+    ws.piPayloads = [];
     ws.on('message', raw => {
       const msg = JSON.parse(raw);
       if (msg.event !== 'sendToPropertyInspector') return;
       const pl = msg.payload || {};
+      ws.piPayloads.push(pl);
       if (pl.error) { clearTimeout(timer); reject(new Error('plugin error: ' + JSON.stringify(pl))); return; }
       // Any of these fields indicates a successful connect response
       if (pl.sensors || pl.connectionStatus || pl.compositeSettings || pl.catalog) {
