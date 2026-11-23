@@ -14,7 +14,9 @@
 # asset that was replaced after publication is never carried forward.
 #
 # Whatever is shipped is recorded in release-hashes.txt for the version in the
-# manifest; commit that file with the release.
+# manifest; commit that file with the release. When that version is already
+# tagged, nothing is recorded: the binaries are compared with the record
+# instead, and a difference stops the release.
 #
 # Environment:
 #   REBUILD_BINARIES=1   keep the freshly built binaries, whatever changed
@@ -34,28 +36,49 @@ binaries=(hwinfo.exe hwinfo-bridge.exe)
 
 # report prints the hashes of what is in the plugin directory now and records
 # them for the version being released, unless that version is already tagged.
+# The version being released, from the manifest.
+release_tag="v$(python3 "$root_dir/scripts/manifest-version.py")"
+
 report() {
-  local built="${1:-}" version tag tmp
+  local built="${1:-}" tmp got want mismatch=0
   for bin in "${binaries[@]}"; do
     echo "  $bin $(sha256sum "$plugin_dir/$bin" | cut -d' ' -f1)"
   done
-  version="$(python3 "$root_dir/scripts/manifest-version.py")"
-  tag="v$version"
-  if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
-    echo "  $tag is already tagged; release-hashes.txt left as it is"
+  # A version that is already tagged has been released. Nothing is recorded
+  # for it any more: what is in the plugin directory must be what was
+  # recorded then, so different bytes never ship under a released version.
+  if git rev-parse -q --verify "refs/tags/$release_tag" >/dev/null; then
+    for bin in "${binaries[@]}"; do
+      got="$(sha256sum "$plugin_dir/$bin" | cut -d' ' -f1)"
+      want="$(awk -v key="$release_tag/$bin" '$2 == key { print $1 }' "$hashes_file" 2>/dev/null | head -n 1)"
+      if [[ -z "$want" ]]; then
+        echo "release-binaries: $release_tag is tagged but $release_tag/$bin is not in ${hashes_file#"$root_dir"/}" >&2
+        mismatch=1
+      elif [[ "$want" != "$got" ]]; then
+        echo "release-binaries: $release_tag/$bin differs from the hash recorded for the release" >&2
+        echo "  recorded: $want" >&2
+        echo "  built:    $got" >&2
+        mismatch=1
+      fi
+    done
+    if [[ "$mismatch" == "1" ]]; then
+      echo "  $release_tag is already released with other binaries; bump the version in the manifest" >&2
+      exit 1
+    fi
+    echo "  $release_tag is already tagged: the binaries match the record"
     return
   fi
   # Fresh binaries were built for this version; reused ones keep the
   # release they were built for.
-  [[ -n "$built" ]] || built="$tag"
+  [[ -n "$built" ]] || built="$release_tag"
   tmp="$(mktemp)"
-  awk -v a="$tag/hwinfo.exe" -v b="$tag/hwinfo-bridge.exe" '$2 != a && $2 != b' "$hashes_file" > "$tmp" || true
+  awk -v a="$release_tag/hwinfo.exe" -v b="$release_tag/hwinfo-bridge.exe" '$2 != a && $2 != b' "$hashes_file" > "$tmp" || true
   for bin in "${binaries[@]}"; do
-    echo "$(sha256sum "$plugin_dir/$bin" | cut -d' ' -f1)  $tag/$bin  built:$built" >> "$tmp"
+    echo "$(sha256sum "$plugin_dir/$bin" | cut -d' ' -f1)  $release_tag/$bin  built:$built" >> "$tmp"
   done
   cat "$tmp" > "$hashes_file"
   rm -f "$tmp"
-  echo "  recorded for $tag in ${hashes_file#"$root_dir"/}"
+  echo "  recorded for $release_tag in ${hashes_file#"$root_dir"/}"
 }
 
 if [[ "${REBUILD_BINARIES:-}" == "1" ]]; then
@@ -64,7 +87,9 @@ if [[ "${REBUILD_BINARIES:-}" == "1" ]]; then
   exit 0
 fi
 
-prev="${PREV_TAG:-$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || true)}"
+# The previous release is the latest tag other than the version being
+# released, so a rerun for a tagged version compares with the release before it.
+prev="${PREV_TAG:-$(git describe --tags --abbrev=0 --match 'v*' --exclude "$release_tag" 2>/dev/null || true)}"
 if [[ -z "$prev" ]]; then
   echo "binaries: rebuilt (no previous release tag)"
   report
