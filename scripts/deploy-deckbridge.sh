@@ -88,3 +88,15 @@ else
   echo "Dashboard:      $dashboard_url"
   echo "Log:            $log_file"
 fi
+
+# ── dials for the live dial e2e suites ──────────────────────────────────────
+# `make verify` runs dial suites against the dial that is on the emulated
+# Stream Deck +. Put the two dials they need in place when they are missing.
+# The integration runner starts DeckBridge with the XL profile, where the
+# emulated Stream Deck + has no encoders and a dial cannot be placed.
+if [[ "${DECKBRIDGE_DEVICE_PROFILE:-}" == "streamdeck-xl" ]]; then
+  echo "dials: skipped, the streamdeck-xl profile has no encoders"
+elif [[ -n "$dashboard_url" ]]; then
+  # The repo ships no node_modules; 'ws' comes from the DeckBridge checkout.
+  NODE_PATH="${NODE_PATH:-$deckbridge_dir/node_modules}" node "$root_dir/scripts/ensure-deckbridge-dials.js" || echo "warn: dials for the live dial e2e suites are not in place"
+fi

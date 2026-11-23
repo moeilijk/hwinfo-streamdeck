@@ -48,6 +48,10 @@ var sensors = []mockSensor{
 	{id: "/mockcpu/0", name: "Mock CPU"},
 	{id: "/mockgpu/0", name: "Mock GPU"},
 	{id: "/mocksys/0", name: "Mock System"},
+	// Two sensors of one category that carry the same reading: the dial bulk
+	// suites need a reading that exists on more than one sensor.
+	{id: "/mocknvme/0", name: "Mock NVMe 0"},
+	{id: "/mocknvme/1", name: "Mock NVMe 1"},
 }
 
 // The mock remote source mirrors HWiNFO's remote shared-memory mappings:
@@ -88,6 +92,8 @@ func defaultReadings() map[string]*mockReading {
 		{path: "/mockgpu/0/load/0", sensor: "/mockgpu/0", label: "GPU Total", typ: "Usage", unit: "%", defVal: 35, min: 0, max: 100},
 		{path: "/mocksys/0/voltage/0", sensor: "/mocksys/0", label: "CPU Core", typ: "Volt", unit: "V", defVal: 1.2, min: 0.8, max: 1.6},
 		{path: "/mocksys/0/fan/0", sensor: "/mocksys/0", label: "CPU Fan", typ: "Fan", unit: "RPM", defVal: 1200, min: 0, max: 3000},
+		{path: "/mocknvme/0/temperature/0", sensor: "/mocknvme/0", label: "Drive Temperature", typ: "Temp", unit: "°C", defVal: 38, min: 20, max: 80},
+		{path: "/mocknvme/1/temperature/0", sensor: "/mocknvme/1", label: "Drive Temperature", typ: "Temp", unit: "°C", defVal: 41, min: 20, max: 80},
 	}
 	m := make(map[string]*mockReading, len(list))
 	for _, r := range list {
