@@ -246,7 +246,7 @@ func (p *Plugin) toggleFavoriteSelection(action, context string, settings *actio
 		return fmt.Errorf("favorite requires a valid sensor and reading selection")
 	}
 
-	sensors, err := p.sensorsWithTimeout(2*time.Second)
+	sensors, err := p.sensorsWithTimeout(2 * time.Second)
 	if err != nil {
 		return err
 	}
@@ -299,7 +299,7 @@ func (p *Plugin) removeFavorite(action, context string, settings *actionSettings
 		return err
 	}
 
-	sensors, err := p.sensorsWithTimeout(2*time.Second)
+	sensors, err := p.sensorsWithTimeout(2 * time.Second)
 	if err != nil {
 		return err
 	}

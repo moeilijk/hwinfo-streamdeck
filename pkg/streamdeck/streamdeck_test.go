@@ -9,7 +9,7 @@ import (
 // (src/lib/rendererHelper.ts getImage). If the base64 payload does not start
 // immediately after "base64," (capture group 2 empty), OpenDeck silently
 // replaces the image with the action's default icon — the tile then never
-// shows sensor data there (PR #130).
+// shows sensor data there (lhm-streamdeck #74, hwinfo-streamdeck PR #130).
 var openDeckBase64Re = regexp.MustCompile(`^data:image/(apng|avif|gif|jpeg|png|svg\+xml|webp|bmp|x-icon|tiff);base64,([A-Za-z0-9+/]+={0,2})?`)
 
 func TestSetImageDataURLAcceptedByStrictHosts(t *testing.T) {

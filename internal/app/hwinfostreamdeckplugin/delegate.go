@@ -504,7 +504,7 @@ func (p *Plugin) OnPropertyInspectorConnected(event *streamdeck.EvSendToPlugin) 
 	if err != nil {
 		log.Println("OnPropertyInspectorConnected getSettings", err)
 	}
-	sensors, err := p.sensorsWithTimeout(2*time.Second)
+	sensors, err := p.sensorsWithTimeout(2 * time.Second)
 	if err != nil {
 		log.Println("OnPropertyInspectorConnected Sensors", err)
 		go p.restartBridge(p.bridge)

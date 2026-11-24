@@ -9,12 +9,12 @@ type globalSettings struct {
 
 // settingsTileSettings stores per-tile appearance settings for the settings action
 type settingsTileSettings struct {
-	TileBackground          string `json:"tileBackground"`                    // hex color for tile background
-	TileTextColor           string `json:"tileTextColor"`                     // hex color for tile value text
-	ShowLabel               bool   `json:"showLabel"`                         // toggles startup placeholder background
-	Title                   string `json:"title"`                             // title text, like graph tiles
-	TitleColor              string `json:"titleColor"`                        // title color, like graph tiles
-	ShowTitleInGraph        *bool  `json:"showTitleInGraph"`                  // mirrors graph tile title behavior
+	TileBackground   string `json:"tileBackground"`   // hex color for tile background
+	TileTextColor    string `json:"tileTextColor"`    // hex color for tile value text
+	ShowLabel        bool   `json:"showLabel"`        // toggles startup placeholder background
+	Title            string `json:"title"`            // title text, like graph tiles
+	TitleColor       string `json:"titleColor"`       // title color, like graph tiles
+	ShowTitleInGraph *bool  `json:"showTitleInGraph"` // mirrors graph tile title behavior
 }
 
 // Threshold represents a single configurable threshold level
@@ -31,11 +31,11 @@ type Threshold struct {
 	CooldownMs      int     `json:"cooldownMs,omitempty"`
 	Sticky          bool    `json:"sticky,omitempty"`
 	BringToFront    bool    `json:"bringToFront,omitempty"` // dial: make this page the active one when the alarm fires / snooze times out
-	BackgroundColor string  `json:"backgroundColor"`       // Background color when triggered
-	ForegroundColor string  `json:"foregroundColor"`       // Graph foreground color
-	HighlightColor  string  `json:"highlightColor"`        // Graph highlight color
-	ValueTextColor  string  `json:"valueTextColor"`        // Value text color
-	ReadingType     string  `json:"readingType,omitempty"` // globals only: "Temp","Volt","Fan","Current","Power","Clock","Usage","Other" or "" = all
+	BackgroundColor string  `json:"backgroundColor"`        // Background color when triggered
+	ForegroundColor string  `json:"foregroundColor"`        // Graph foreground color
+	HighlightColor  string  `json:"highlightColor"`         // Graph highlight color
+	ValueTextColor  string  `json:"valueTextColor"`         // Value text color
+	ReadingType     string  `json:"readingType,omitempty"`  // globals only: "Temp","Volt","Fan","Current","Power","Clock","Usage","Other" or "" = all
 }
 
 type actionSettings struct {
@@ -110,13 +110,13 @@ type actionData struct {
 }
 
 type favoriteReading struct {
-	ID              string `json:"id"`
-	SensorUID       string `json:"sensorUid"`
-	SensorName      string `json:"sensorName"`
-	ReadingID       int32  `json:"readingId,string"`
-	ReadingLabel    string `json:"readingLabel"`
-	ReadingUnit     string `json:"readingUnit"`
-	Category        string `json:"category,omitempty"`
+	ID           string `json:"id"`
+	SensorUID    string `json:"sensorUid"`
+	SensorName   string `json:"sensorName"`
+	ReadingID    int32  `json:"readingId,string"`
+	ReadingLabel string `json:"readingLabel"`
+	ReadingUnit  string `json:"readingUnit"`
+	Category     string `json:"category,omitempty"`
 }
 
 type evStatus struct {
@@ -164,10 +164,10 @@ type evSendCatalogSource struct {
 }
 
 type evSendCatalogPayloadCatalog struct {
-	Sensors        []*evSendSensorsPayloadSensor   `json:"sensors"`
-	Readings       []*evSendReadingsPayloadReading `json:"readings"`
-	Favorites      []favoriteReading               `json:"favorites,omitempty"`
-	Sources        []evSendCatalogSource           `json:"sources,omitempty"`
+	Sensors   []*evSendSensorsPayloadSensor   `json:"sensors"`
+	Readings  []*evSendReadingsPayloadReading `json:"readings"`
+	Favorites []favoriteReading               `json:"favorites,omitempty"`
+	Sources   []evSendCatalogSource           `json:"sources,omitempty"`
 }
 
 type evSendCatalogPayload struct {
@@ -223,9 +223,9 @@ type derivedSlotSettings struct {
 }
 
 type derivedActionSettings struct {
-	SlotCount       int                    `json:"slotCount"`
-	Formula         string                 `json:"formula"` // "sum","average","max","min","delta","pct"
-	Slots           [8]derivedSlotSettings `json:"slots"`
+	SlotCount int                    `json:"slotCount"`
+	Formula   string                 `json:"formula"` // "sum","average","max","min","delta","pct"
+	Slots     [8]derivedSlotSettings `json:"slots"`
 
 	// Tile-level display — mirrors actionSettings so threshold/color/format pipeline works unchanged
 	Title                    string      `json:"title"`
@@ -255,9 +255,9 @@ type derivedActionSettings struct {
 }
 
 type dialActionSettings struct {
-	ActiveIndex     int              `json:"activeIndex"`
-	Pages           []actionSettings `json:"pages"`
-	DefaultView     string           `json:"defaultView,omitempty"`    // "", "fullscreen", "overview"
+	ActiveIndex int              `json:"activeIndex"`
+	Pages       []actionSettings `json:"pages"`
+	DefaultView string           `json:"defaultView,omitempty"` // "", "fullscreen", "overview"
 	// OverviewStyle selects how the overview (non-fullscreen) view renders:
 	// "" / "carousel" = the original horizontal carousel; "stacked" = vertically
 	// scrolling full-width strips with the active reading dominant and a peek of

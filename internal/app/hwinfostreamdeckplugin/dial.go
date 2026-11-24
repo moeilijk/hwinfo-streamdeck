@@ -16,8 +16,8 @@ import (
 	"github.com/moeilijk/hwinfo-streamdeck/pkg/graph"
 	hwsensorsservice "github.com/moeilijk/hwinfo-streamdeck/pkg/service"
 	"github.com/moeilijk/hwinfo-streamdeck/pkg/streamdeck"
-	"golang.org/x/image/font"
 	xdraw "golang.org/x/image/draw"
+	"golang.org/x/image/font"
 	"golang.org/x/image/math/fixed"
 )
 
@@ -1302,7 +1302,7 @@ func (p *Plugin) handleDialPropertyInspectorConnected(event *streamdeck.EvSendTo
 	copy(globals, p.globalSettings.GlobalThresholds)
 	p.mu.RUnlock()
 
-	sensors, err := p.sensorsWithTimeout(2*time.Second)
+	sensors, err := p.sensorsWithTimeout(2 * time.Second)
 	if err != nil {
 		log.Printf("dial PI sensors: %v", err)
 		go p.restartBridge(p.bridge)

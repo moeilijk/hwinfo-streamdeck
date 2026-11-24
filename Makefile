@@ -45,6 +45,8 @@ debug:
 # @xcopy com.moeilijk.hwinfo.sdPlugin $(APPDATA)\\Elgato\\StreamDeck\\Plugins\\com.moeilijk.hwinfo.sdPlugin\\ /E /Q /Y
 
 verify:
+	@unformatted="$$(gofmt -l $$(git ls-files '*.go'))"; \
+	if [ -n "$$unformatted" ]; then echo "gofmt needed:"; echo "$$unformatted"; exit 1; fi
 	$(GOTARGETENV) $(CGOWINENV) $(GOCMD) build ./...
 	$(GOTARGETENV) $(GOBUILD) -o $(SDPLUGINDIR)/hwinfo.exe ./cmd/hwinfo_streamdeck_plugin
 	$(GOTARGETENV) $(CGOWINENV) $(GOBUILD) -o $(SDPLUGINDIR)/hwinfo-bridge.exe ./cmd/hwinfo-bridge
