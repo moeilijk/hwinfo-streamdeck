@@ -704,25 +704,15 @@ func (p *Plugin) updateTiles(data *actionData) {
 		}
 	}
 
-	r, readings, err := p.getReading(s.SensorUID, s.ReadingID)
+	// No recovery-by-label: an unknown reading id means the source renamed its
+	// sensors (a source upgrade, a hardware change) and the user re-selects
+	// the reading explicitly. Silent re-mapping could pick the wrong reading
+	// when labels are not unique within a sensor.
+	r, _, err := p.getReading(s.SensorUID, s.ReadingID)
 	if err != nil {
-		if s.ReadingLabel != "" {
-			for _, candidate := range readings {
-				if candidate.Label() == s.ReadingLabel {
-					s.ReadingID = candidate.ID()
-					r = candidate
-					err = nil
-					_ = p.sd.SetSettings(data.context, s)
-					p.am.SetAction(data.action, data.context, s)
-					break
-				}
-			}
-		}
-		if err != nil {
-			log.Printf("getReading failed: %v\n", err)
-			showUnavailable()
-			return
-		}
+		log.Printf("getReading failed: %v\n", err)
+		showUnavailable()
+		return
 	}
 	if p.takePendingScaleReset(data.context, pollTime) {
 		g.Clear()

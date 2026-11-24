@@ -148,7 +148,7 @@ Remote monitoring is a HWiNFO feature; its official documentation is the "Remote
 
 - **Tiles show "HWiNFO Unavailable" or "Please Launch HWiNFO64"**: HWiNFO is not running, is not in Sensors-only mode, or Shared Memory Support is off. Walk through the HWiNFO setup above; if the plugin doesn't recover immediately, quit and reopen HWiNFO64.
 - **Tiles stop updating after ~12 hours**: the free version of HWiNFO limits Shared Memory Support to 12 hours of continuous runtime. Restart HWiNFO (or re-enable the setting) to continue; a HWiNFO Pro license removes the limit. This is HWiNFO policy, not something the plugin can work around.
-- **A tile shows no value after upgrading or after hardware changes**: sensor ids can change, and the plugin first tries to re-match the configured reading by its label automatically. If the tile stays empty, open its configuration and select the sensor and reading again.
+- **A tile shows the placeholder, or a dial page "Reading missing", after an upgrade or a hardware change**: the reading the tile was set to is no longer there under its id. The plugin does not switch to a reading with the same name by itself, because one sensor can have several readings with the same name. Open the tile's configuration and select the sensor and reading again.
 - **Reporting a bug**: the plugin writes a log to `%APPDATA%\Elgato\StreamDeck\Plugins\com.moeilijk.hwinfo.sdPlugin\hwinfo.log`; the last lines are usually enough to pinpoint the problem. Please attach them to your issue.
 
 ## Building from source

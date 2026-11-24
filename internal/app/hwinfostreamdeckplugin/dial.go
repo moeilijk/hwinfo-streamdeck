@@ -1034,18 +1034,9 @@ func (p *Plugin) updateDialPage(ctx string, settings *dialActionSettings, state 
 	}
 
 	settingsChanged := false
-	r, readings, err := p.getReading(page.SensorUID, page.ReadingID)
-	if err != nil && page.ReadingLabel != "" {
-		for _, candidate := range readings {
-			if candidate.Label() == page.ReadingLabel {
-				page.ReadingID = candidate.ID()
-				r = candidate
-				err = nil
-				settingsChanged = true
-				break
-			}
-		}
-	}
+	// No recovery-by-label (see updateTiles): unknown ids surface as the
+	// explicit "Reading missing" state and the user re-selects.
+	r, _, err := p.getReading(page.SensorUID, page.ReadingID)
 	if err != nil {
 		if active {
 			render.messageTitle = "HWiNFO Dial"

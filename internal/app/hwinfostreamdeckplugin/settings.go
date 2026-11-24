@@ -139,21 +139,8 @@ func syncSettingsWithReadings(settings *actionSettings, readings []hwsensorsserv
 			}
 		}
 	}
-	if settings.ReadingLabel != "" {
-		for _, r := range readings {
-			if r.Label() == settings.ReadingLabel {
-				if settings.ReadingID != r.ID() {
-					settings.ReadingID = r.ID()
-					changed = true
-				}
-				if !settings.IsValid {
-					settings.IsValid = true
-					changed = true
-				}
-				return changed
-			}
-		}
-	}
+	// Deliberately no recovery-by-label: a stale ReadingID stays invalid and
+	// the user re-selects the reading. The label is display metadata only.
 	return changed
 }
 
