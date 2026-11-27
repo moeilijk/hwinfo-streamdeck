@@ -324,13 +324,10 @@ function saveCurrentAsPreset(name) {
   updated.push(preset);
   allPresets = updated;
   populatePresetSelect(allPresets);
-  if (websocket && websocket.readyState === 1) {
-    websocket.send(JSON.stringify({
-      event: "setGlobalSettings",
-      context: uuid,
-      payload: { derivedPresets: allPresets }
-    }));
-  }
+  // The plugin owns the global settings and writes them complete. Stream
+  // Deck replaces the stored global settings on every setGlobalSettings, so a
+  // write of only the presets would erase everything else.
+  sendValueToPlugin(allPresets, "saveDerivedPresets");
 }
 
 function loadPresetByName(name) {

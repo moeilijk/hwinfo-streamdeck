@@ -1,10 +1,13 @@
 package hwinfostreamdeckplugin
 
+import "encoding/json"
+
 // globalSettings represents plugin-wide settings (not per-action)
 type globalSettings struct {
 	PollInterval     int               `json:"pollInterval"`               // milliseconds: 250..10000
 	FavoriteReadings []favoriteReading `json:"favoriteReadings,omitempty"` // shared favorites for all tiles
 	GlobalThresholds []Threshold       `json:"globalThresholds,omitempty"` // shared threshold library
+	DerivedPresets   json.RawMessage   `json:"derivedPresets,omitempty"`   // Derived presets, owned by the Derived Property Inspector
 }
 
 // settingsTileSettings stores per-tile appearance settings for the settings action

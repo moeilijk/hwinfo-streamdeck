@@ -362,12 +362,9 @@ function bindUIHandlers() {
     var interval = normalizeInterval(e.target.value);
     e.target.value = interval;
 
-    sendJson({
-      event: "setGlobalSettings",
-      context: uuid,
-      payload: { pollInterval: interval }
-    });
-
+    // The plugin writes the complete global settings (setPollInterval below).
+    // Stream Deck replaces the stored global settings on every
+    // setGlobalSettings, so the Property Inspector never writes them itself.
     var rateEl = byId("currentRate");
     if (rateEl) {
       rateEl.textContent = interval + "ms";

@@ -31,6 +31,9 @@ node scripts/test-reading-pi.js
 echo "test: dial PI functional script"
 node scripts/test-dial-pi.js
 
+echo "test: derived PI functional script"
+node scripts/test-derived-pi.js
+
 echo "test: source filter PI functional script"
 node scripts/test-source-filter-pi.js
 

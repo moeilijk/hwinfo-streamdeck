@@ -155,9 +155,10 @@ function testPollIntervalEvents() {
   elements.pollInterval.value = "2000";
   elements.pollInterval.trigger("change");
 
-  const global = sent.find((m) => m.event === "setGlobalSettings");
-  assert(global, "missing setGlobalSettings");
-  assert(global.payload.pollInterval === 2000, "poll interval payload mismatch");
+  // Stream Deck replaces the stored global settings on every
+  // setGlobalSettings: a write of only pollInterval would erase the
+  // favorites, thresholds and presets. The plugin writes them whole.
+  assert(!sent.some((m) => m.event === "setGlobalSettings"), "PI must not write global settings itself");
 
   const pollMsgs = sent.filter((m) => m.event === "sendToPlugin" && m.payload && m.payload.setPollInterval === 2000);
   assert(pollMsgs.length === 1, "expected one setPollInterval message");
