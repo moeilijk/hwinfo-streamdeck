@@ -12,7 +12,7 @@ The version rationale must include:
 
 Wait for explicit approval of that version rationale before making any release-version changes or running release commands.
 
-Issues are issues, in every workflow. A GitHub issue is the tracked work item with its own lifecycle, not a note, an internal document, or a passing remark: it is created (text approved first), labeled and assigned, referenced from the branch, commits, PRs, and release notes, updated in the issue itself on progress or blockers, and closed only as part of the publish flow after explicit approval. Every workflow runs through an issue, so work that has no issue gets one first. Internal documents under `docs/` do not replace the issue.
+Issues are issues, in every workflow. A GitHub issue is the tracked work item with its own lifecycle, not a note, an internal document, or a passing remark: it is created (text approved first), labeled and assigned, referenced from the branch, commits, PRs, and release notes, updated in the issue itself on progress or blockers, and closed only as part of the publish flow after explicit approval. An issue is a reminder for work we will do later. Anything that can be fixed right now, or is already built, gets no issue: fix it, test it, commit it. Where an issue exists, internal documents under `docs/` do not replace it.
 
 When a hardware test has been approved and the related change is committed and pushed, handle the corresponding GitHub issue as part of the same publish flow. Close it when the release/publish completes, or update it with the exact remaining blocker if it cannot be closed yet.
 
